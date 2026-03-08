@@ -10,16 +10,21 @@ export default function SignupPage() {
   const router = useRouter();
   const { signUp } = useAuth();
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: '',
+    username: '',
+    birthMonth: '',
+    birthYear: '',
   });
+  const [role, setRole] = useState<'ATHLETE' | 'COACH'>('ATHLETE');
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -49,11 +54,43 @@ export default function SignupPage() {
     }
   };
 
+  const validateAge = (): boolean => {
+    if (!formData.birthMonth || !formData.birthYear) {
+      setError('Please provide your birth month and year');
+      return false;
+    }
+
+    const birthYear = parseInt(formData.birthYear);
+    const birthMonth = parseInt(formData.birthMonth);
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1;
+
+    const age = currentYear - birthYear - (currentMonth < birthMonth ? 1 : 0);
+
+    if (age < 14) {
+      setError('You must be at least 14 years old to join');
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!acceptTerms) {
       setError('You must accept the Terms of Service and Privacy Policy');
+      return;
+    }
+
+    if (!formData.firstName || !formData.lastName) {
+      setError('Please provide your first and last name');
+      return;
+    }
+
+    if (!formData.username) {
+      setError('Please choose a username');
       return;
     }
 
@@ -67,11 +104,19 @@ export default function SignupPage() {
       return;
     }
 
+    if (!validateAge()) {
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
 
-      await signUp(formData.email, formData.password);
+      await signUp(formData.email, formData.password, role, {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        username: formData.username,
+      });
       router.push('/dashboard/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -304,21 +349,40 @@ export default function SignupPage() {
 
           {/* Signup Form */}
           <form onSubmit={handleSignUp} className="space-y-4">
-            <div>
-              <label htmlFor="name" className="label-text block mb-2.5">
-                Full Name
-              </label>
-              <input
-                id="name"
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                placeholder="Your name"
-                required
-                disabled={isLoading}
-                className="input-field w-full rounded-lg px-4 py-3.5 disabled:opacity-50 disabled:cursor-not-allowed"
-              />
+            {/* First Name and Last Name */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="firstName" className="label-text block mb-2.5">
+                  First Name
+                </label>
+                <input
+                  id="firstName"
+                  type="text"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  placeholder="John"
+                  required
+                  disabled={isLoading}
+                  className="input-field w-full rounded-lg px-4 py-3.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label htmlFor="lastName" className="label-text block mb-2.5">
+                  Last Name
+                </label>
+                <input
+                  id="lastName"
+                  type="text"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  placeholder="Doe"
+                  required
+                  disabled={isLoading}
+                  className="input-field w-full rounded-lg px-4 py-3.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </div>
             </div>
 
             <div>
@@ -332,6 +396,23 @@ export default function SignupPage() {
                 value={formData.email}
                 onChange={handleInputChange}
                 placeholder="athlete@example.com"
+                required
+                disabled={isLoading}
+                className="input-field w-full rounded-lg px-4 py-3.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="username" className="label-text block mb-2.5">
+                Username
+              </label>
+              <input
+                id="username"
+                type="text"
+                name="username"
+                value={formData.username}
+                onChange={handleInputChange}
+                placeholder="johndoe"
                 required
                 disabled={isLoading}
                 className="input-field w-full rounded-lg px-4 py-3.5 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -370,6 +451,97 @@ export default function SignupPage() {
                 disabled={isLoading}
                 className="input-field w-full rounded-lg px-4 py-3.5 disabled:opacity-50 disabled:cursor-not-allowed"
               />
+            </div>
+
+            {/* Birth Month and Year */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="birthMonth" className="label-text block mb-2.5">
+                  Birth Month
+                </label>
+                <select
+                  id="birthMonth"
+                  name="birthMonth"
+                  value={formData.birthMonth}
+                  onChange={handleInputChange}
+                  required
+                  disabled={isLoading}
+                  className="input-field w-full rounded-lg px-4 py-3.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">Select month</option>
+                  <option value="1">January</option>
+                  <option value="2">February</option>
+                  <option value="3">March</option>
+                  <option value="4">April</option>
+                  <option value="5">May</option>
+                  <option value="6">June</option>
+                  <option value="7">July</option>
+                  <option value="8">August</option>
+                  <option value="9">September</option>
+                  <option value="10">October</option>
+                  <option value="11">November</option>
+                  <option value="12">December</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="birthYear" className="label-text block mb-2.5">
+                  Birth Year
+                </label>
+                <select
+                  id="birthYear"
+                  name="birthYear"
+                  value={formData.birthYear}
+                  onChange={handleInputChange}
+                  required
+                  disabled={isLoading}
+                  className="input-field w-full rounded-lg px-4 py-3.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">Select year</option>
+                  {Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i).map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Role Selection */}
+            <div>
+              <label className="label-text block mb-2.5">Account Type</label>
+              <div className="flex gap-3">
+                <label className="flex-1 flex items-center gap-3 px-4 py-3.5 rounded-lg cursor-pointer transition-all" style={{
+                  backgroundColor: role === 'ATHLETE' ? 'rgba(94, 255, 110, 0.1)' : 'rgba(17, 17, 17, 0.8)',
+                  border: `1.5px solid ${role === 'ATHLETE' ? '#5EFF6E' : 'rgba(94, 255, 110, 0.15)'}`,
+                }}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value="ATHLETE"
+                    checked={role === 'ATHLETE'}
+                    onChange={(e) => setRole(e.target.value as 'ATHLETE' | 'COACH')}
+                    disabled={isLoading}
+                    className="w-4 h-4 cursor-pointer"
+                  />
+                  <span className="body-text text-white text-sm">I'm an Athlete</span>
+                </label>
+
+                <label className="flex-1 flex items-center gap-3 px-4 py-3.5 rounded-lg cursor-pointer transition-all" style={{
+                  backgroundColor: role === 'COACH' ? 'rgba(94, 255, 110, 0.1)' : 'rgba(17, 17, 17, 0.8)',
+                  border: `1.5px solid ${role === 'COACH' ? '#5EFF6E' : 'rgba(94, 255, 110, 0.15)'}`,
+                }}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value="COACH"
+                    checked={role === 'COACH'}
+                    onChange={(e) => setRole(e.target.value as 'ATHLETE' | 'COACH')}
+                    disabled={isLoading}
+                    className="w-4 h-4 cursor-pointer"
+                  />
+                  <span className="body-text text-white text-sm">I'm a Coach</span>
+                </label>
+              </div>
             </div>
 
             {/* Terms Checkbox */}

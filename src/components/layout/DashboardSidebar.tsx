@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { FEATURES } from '@/lib/features';
+import { SponsorBanner } from '@/components/SponsorBanner';
 
 interface NavLink {
   href: string;
@@ -17,7 +18,7 @@ export function DashboardSidebar() {
     { href: '/dashboard/dashboard', label: 'Dashboard', show: true },
     { href: '/dashboard/profile', label: 'Profile', show: true },
     { href: '/dashboard/competitions', label: 'Results', show: true },
-    { href: '/dashboard/athletes', label: 'Athletes', show: FEATURES.SEARCH },
+    { href: '/athletes', label: 'Athletes', show: FEATURES.SEARCH },
   ];
 
   return (
@@ -40,6 +41,9 @@ export function DashboardSidebar() {
           ) : null
         )}
       </nav>
+
+      {/* Sponsor Banner */}
+      <SponsorBanner />
 
       {/* Footer */}
       <div className="border-t border-[#1f1f1f] p-6">

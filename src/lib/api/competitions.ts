@@ -37,6 +37,26 @@ export async function addCompetitionResult(
   });
 }
 
+export async function addMeet(
+  athleteId: string,
+  data: {
+    meetName: string;
+    meetDate: string;
+    meetLocation?: string;
+    floor?: number | null;
+    pommelHorse?: number | null;
+    rings?: number | null;
+    vault?: number | null;
+    parallelBars?: number | null;
+    highBar?: number | null;
+  }
+): Promise<CompetitionResult[]> {
+  return apiCall<CompetitionResult[]>(`/athletes/${athleteId}/meets`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
 export async function getCompetitionResults(
   athleteId: string
 ): Promise<CompetitionResult[]> {
