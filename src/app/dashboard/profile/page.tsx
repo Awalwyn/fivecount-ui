@@ -41,17 +41,20 @@ export default function ProfilePage() {
         // Load profile
         const profileData = await getAthleteByUserId(user.id);
         setAthlete(profileData);
+        setError(null);
 
-        // Load competition results
+        // Load competition results (don't fail if this errors)
         try {
           const resultsData = await getCompetitionResults(profileData.id);
           setResults(resultsData);
         } catch (err) {
           console.error('Failed to load competition results', err);
+          setResults([]);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load profile');
         setAthlete(null);
+        setResults([]);
       } finally {
         setLoading(false);
       }
@@ -271,9 +274,9 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Recent Meets */}
+          {/* Recent Posts */}
           <div>
-            <h2 className="text-body-bold text-lg mb-4 text-white">Recent Meets</h2>
+            <h2 className="text-body-bold text-lg mb-4 text-white">Recent Posts</h2>
             <div className="space-y-3">
               {groupResultsByMeet(results).slice(0, 3).length > 0 ? (
                 groupResultsByMeet(results).slice(0, 3).map((meet, idx) => (

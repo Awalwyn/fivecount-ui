@@ -3,7 +3,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import {
   createAthleteProfile,
@@ -65,7 +65,9 @@ export function ProfileFormModal({
   });
 
   // Reset form when modal opens
-  if (isOpen && !isSubmitting) {
+  useEffect(() => {
+    if (!isOpen) return;
+
     if (isEditMode && existingProfile) {
       reset({
         firstName: existingProfile.firstName,
@@ -93,7 +95,7 @@ export function ProfileFormModal({
         commitStatus: undefined,
       });
     }
-  }
+  }, [isOpen, isEditMode, existingProfile, user, reset]);
 
   async function onSubmit(data: ProfileFormData) {
     try {
