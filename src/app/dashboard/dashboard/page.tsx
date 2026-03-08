@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { getAthleteByUserId, AthleteProfile } from '@/lib/api/athletes';
+import { ProfileFormModal } from '@/components/ProfileFormModal';
 
 interface EventStatsData {
   [key: string]: {
@@ -27,6 +28,7 @@ export default function DashboardPage() {
   const [athlete, setAthlete] = useState<AthleteProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -112,12 +114,12 @@ export default function DashboardPage() {
             <p className="text-amber-200 font-semibold">Complete your profile</p>
             <p className="text-amber-100/70 text-sm">Add your details to track scores and get discovered by coaches</p>
           </div>
-          <a
-            href="/dashboard/profile"
+          <button
+            onClick={() => setIsProfileModalOpen(true)}
             className="ml-4 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold px-4 py-2 rounded whitespace-nowrap transition-colors"
           >
             Complete Profile →
-          </a>
+          </button>
         </div>
       )}
 
@@ -289,6 +291,17 @@ export default function DashboardPage() {
           )}
         </>
       )}
+
+      {/* Profile Form Modal */}
+      <ProfileFormModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        onSuccess={(newProfile) => {
+          setAthlete(newProfile);
+          setIsProfileModalOpen(false);
+        }}
+        existingProfile={null}
+      />
     </div>
   );
 }

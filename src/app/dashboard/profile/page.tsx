@@ -1,256 +1,384 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import {
-  createAthleteProfile,
-  updateAthleteProfile,
-  getAthleteByUserId,
-  AthleteProfile,
-} from '@/lib/api/athletes';
+import { getAthleteByUserId, AthleteProfile, CommitStatus } from '@/lib/api/athletes';
+import { getCompetitionResults, CompetitionResult, EventType } from '@/lib/api/competitions';
+import { ProfileFormModal } from '@/components/ProfileFormModal';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const profileSchema = z.object({
-  firstName: z.string().min(1, 'First name is required').max(50),
-  lastName: z.string().min(1, 'Last name is required').max(50),
-  gradYear: z.coerce.number().refine((val) => val >= 2020 && val <= 2050, 'Grad year must be between 2020 and 2050'),
-  clubName: z.string().min(1, 'Club name is required').max(100),
-  city: z.string().min(1, 'City is required').max(50),
-  state: z.string().min(2, 'State is required').max(2),
-  bio: z.string().max(500, 'Bio must be 500 characters or less'),
-  profilePictureUrl: z.string().refine(
-    (val) => !val || /^https?:\/\/.+\..+/.test(val),
-    'Must be a valid URL or empty'
-  ),
-  instagramHandle: z.string().max(30, 'Max 30 characters'),
-  commitStatus: z.enum(['OPEN', 'VERBALLY_COMMITTED', 'SIGNED', 'NOT_RECRUITING']).optional(),
-});
+interface EventStatData {
+  average: number;
+  attemptCount: number;
+  scoreProgression: Array<{ score: number; date?: string }>;
+}
 
-type ProfileFormData = z.infer<typeof profileSchema>;
+type EventStatsData = Record<EventType, EventStatData>;
+
+const COMMIT_STATUS_CONFIG: Record<CommitStatus, { label: string; className: string }> = {
+  OPEN: { label: 'Open to Recruiting', className: 'text-[#5EFF6E] bg-[#5EFF6E]/10 border border-[#5EFF6E]/30' },
+  VERBALLY_COMMITTED: { label: 'Verbally Committed', className: 'text-blue-400 bg-blue-400/10 border border-blue-400/30' },
+  SIGNED: { label: 'Signed', className: 'text-purple-400 bg-purple-400/10 border border-purple-400/30' },
+  NOT_RECRUITING: { label: 'Not Recruiting', className: 'text-gray-500 bg-gray-500/10 border border-gray-500/30' },
+};
 
 export default function ProfilePage() {
-  const router = useRouter();
   const { user } = useAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
-  const [existingProfile, setExistingProfile] = useState<AthleteProfile | null>(null);
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [athlete, setAthlete] = useState<AthleteProfile | null>(null);
+  const [results, setResults] = useState<CompetitionResult[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm({
-    resolver: zodResolver(profileSchema) as any,
-    defaultValues: {
-      firstName: '',
-      lastName: '',
-      gradYear: new Date().getFullYear(),
-      clubName: '',
-      city: '',
-      state: '',
-      bio: '',
-      profilePictureUrl: '',
-      instagramHandle: '',
-      commitStatus: undefined,
-    },
-  });
-
-  // Load existing profile if it exists
   useEffect(() => {
     if (!user?.id) return;
 
-    async function loadProfile() {
+    const loadData = async () => {
       try {
-        setProfileLoading(true);
-        const profile = await getAthleteByUserId(user!.id);
-        setExistingProfile(profile);
-        setIsEditMode(true);
+        setLoading(true);
+        setError(null);
 
-        reset({
-          firstName: profile.firstName,
-          lastName: profile.lastName,
-          gradYear: profile.gradYear,
-          clubName: profile.clubName,
-          city: profile.city,
-          state: profile.state,
-          bio: profile.bio || '',
-          profilePictureUrl: profile.profilePictureUrl || '',
-          instagramHandle: profile.instagramHandle || '',
-          commitStatus: profile.commitStatus as any,
-        });
-      } catch (error) {
-        // No existing profile - set up form with signup data
-        setIsEditMode(false);
-        reset({
-          firstName: user!.user_metadata?.firstName || '',
-          lastName: user!.user_metadata?.lastName || '',
-          gradYear: new Date().getFullYear(),
-          clubName: '',
-          city: '',
-          state: '',
-          bio: '',
-          profilePictureUrl: '',
-          instagramHandle: '',
-          commitStatus: undefined,
-        });
+        // Load profile
+        const profileData = await getAthleteByUserId(user.id);
+        setAthlete(profileData);
+
+        // Load competition results
+        try {
+          const resultsData = await getCompetitionResults(profileData.id);
+          setResults(resultsData);
+        } catch (err) {
+          console.error('Failed to load competition results', err);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load profile');
+        setAthlete(null);
       } finally {
-        setProfileLoading(false);
+        setLoading(false);
       }
+    };
+
+    loadData();
+  }, [user?.id]);
+
+  // Auto-open modal if no profile exists
+  useEffect(() => {
+    if (!loading && !athlete && !error) {
+      setIsEditModalOpen(true);
     }
+  }, [loading, athlete, error]);
 
-    loadProfile();
-  }, [user?.id, reset]);
-
-  async function onSubmit(data: ProfileFormData) {
-    try {
-      setIsSubmitting(true);
-      setSubmitError(null);
-
-      const cleanData = {
-        ...data,
-        profilePictureUrl: data.profilePictureUrl || undefined,
-        instagramHandle: data.instagramHandle || undefined,
-      };
-
-      if (isEditMode && existingProfile) {
-        await updateAthleteProfile(existingProfile.id, cleanData);
-      } else {
-        await createAthleteProfile(cleanData);
-      }
-
-      router.push('/dashboard/dashboard');
-    } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : `Failed to ${isEditMode ? 'update' : 'create'} profile`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  if (profileLoading) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[400px]">
         <span className="spinner border-[#0a0a0a]"></span>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="heading-display text-4xl text-white mb-2">
-          {isEditMode ? 'Edit Profile' : 'Complete Your Profile'}
-        </h1>
-        <p className="text-gray-400">
-          {isEditMode ? 'Update your athlete information' : 'Add your details so coaches can find you'}
-        </p>
-      </div>
+  if (!athlete) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="heading-display text-4xl text-white mb-2">Your Profile</h1>
+          <p className="text-gray-400">Set up your profile to get discovered by coaches</p>
+        </div>
 
-      <div className="bg-[#111111] border border-[#1f1f1f] rounded-lg p-8 max-w-2xl">
-        {submitError && <div className="error-message mb-6">{submitError}</div>}
-
-        {/* Username Display */}
-        {user?.user_metadata?.username && (
-          <div className="mb-6 flex items-center gap-2 px-4 py-3 rounded-lg bg-[#0a0a0a] border border-[#5EFF6E]/20">
-            <span className="text-gray-500 text-sm">Username:</span>
-            <span className="text-[#5EFF6E] text-sm font-mono">@{user.user_metadata.username}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Name Row */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="input-label">First Name <span className="text-red-500">*</span></label>
-              <input {...register('firstName')} type="text" className="input-field" disabled={isSubmitting} />
-              {errors.firstName && <p className="text-red-400 text-sm mt-1">{errors.firstName.message}</p>}
+        <div className="bg-[#111111] border border-[#1f1f1f] rounded-xl p-8 max-w-4xl">
+          {/* Placeholder Avatar */}
+          <div className="flex gap-6 items-start mb-8">
+            <div className="flex-shrink-0">
+              <div className="w-28 h-28 rounded-xl bg-[#1f1f1f] text-[#5EFF6E] heading-display text-4xl flex items-center justify-center">
+                +
+              </div>
             </div>
-            <div>
-              <label className="input-label">Last Name <span className="text-red-500">*</span></label>
-              <input {...register('lastName')} type="text" className="input-field" disabled={isSubmitting} />
-              {errors.lastName && <p className="text-red-400 text-sm mt-1">{errors.lastName.message}</p>}
+
+            {/* Placeholder Info */}
+            <div className="flex-1">
+              <h2 className="heading-display text-4xl text-gray-500 mb-2">Your Name</h2>
+              <p className="text-gray-500 text-sm mb-4">Club Name · City, State · Class of {new Date().getFullYear()}</p>
+              <p className="text-gray-500 text-sm max-w-lg">Add your details to complete your profile</p>
             </div>
           </div>
 
-          {/* Grad Year */}
-          <div>
-            <label className="input-label">Graduation Year <span className="text-red-500">*</span></label>
-            <input {...register('gradYear')} type="number" className="input-field" disabled={isSubmitting} />
-            {errors.gradYear && <p className="text-red-400 text-sm mt-1">{errors.gradYear.message}</p>}
+          {/* Placeholder Stats Row */}
+          <div className="grid grid-cols-3 gap-4 mb-8 pb-8 border-b border-[#1f1f1f]">
+            <div className="bg-[#0a0a0a] rounded-lg p-4 text-center">
+              <p className="text-gray-400 text-xs mb-2">All Around Peak</p>
+              <p className="text-gray-500 text-3xl font-bold">—</p>
+            </div>
+            <div className="bg-[#0a0a0a] rounded-lg p-4 text-center">
+              <p className="text-gray-400 text-xs mb-2">Best Event Score</p>
+              <p className="text-gray-500 text-3xl font-bold">—</p>
+            </div>
+            <div className="bg-[#0a0a0a] rounded-lg p-4 text-center text-gray-400">
+              <p className="text-xs mb-2">Status</p>
+              <p className="font-semibold">Not set</p>
+            </div>
           </div>
 
-          {/* Club Name */}
-          <div>
-            <label className="input-label">Club Name <span className="text-red-500">*</span></label>
-            <input {...register('clubName')} type="text" className="input-field" placeholder="e.g., Ohio State Gymnastics" disabled={isSubmitting} />
-            {errors.clubName && <p className="text-red-400 text-sm mt-1">{errors.clubName.message}</p>}
-          </div>
-
-          {/* City & State */}
-          <div className="grid grid-cols-3 gap-4">
+          {/* Placeholder Content */}
+          <div className="grid grid-cols-3 gap-6">
             <div className="col-span-2">
-              <label className="input-label">City <span className="text-red-500">*</span></label>
-              <input {...register('city')} type="text" className="input-field" placeholder="Columbus" disabled={isSubmitting} />
-              {errors.city && <p className="text-red-400 text-sm mt-1">{errors.city.message}</p>}
+              <h3 className="text-body-bold text-lg mb-4 text-white">Score Progression</h3>
+              <div className="bg-[#0a0a0a] rounded-lg p-8 text-center text-gray-400">
+                Add your first meet to see score progression
+              </div>
             </div>
             <div>
-              <label className="input-label">State <span className="text-red-500">*</span></label>
-              <input {...register('state')} type="text" maxLength={2} className="input-field" placeholder="OH" disabled={isSubmitting} />
-              {errors.state && <p className="text-red-400 text-sm mt-1">{errors.state.message}</p>}
+              <h3 className="text-body-bold text-lg mb-4 text-white">Recent Meets</h3>
+              <div className="bg-[#0a0a0a] rounded-lg p-8 text-center text-gray-400">
+                Complete your profile to get started
+              </div>
             </div>
           </div>
 
-          {/* Bio */}
-          <div>
-            <label className="input-label">Bio</label>
-            <textarea {...register('bio')} className="input-field resize-none" placeholder="Tell coaches about your gymnastics journey..." rows={4} disabled={isSubmitting} />
-            {errors.bio && <p className="text-red-400 text-sm mt-1">{errors.bio.message}</p>}
+          {/* Setup Button */}
+          <div className="mt-8 flex gap-4">
+            <button
+              onClick={() => setIsEditModalOpen(true)}
+              className="btn-primary flex-1"
+            >
+              Set Up Profile
+            </button>
+          </div>
+        </div>
+
+        {/* Edit Modal */}
+        <ProfileFormModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          onSuccess={(newProfile) => {
+            setAthlete(newProfile);
+            setIsEditModalOpen(false);
+          }}
+          existingProfile={null}
+        />
+      </div>
+    );
+  }
+
+  // Profile exists - show full social media profile view
+  const initials = `${athlete.firstName[0]}${athlete.lastName[0]}`.toUpperCase();
+  const athleteStats = (athlete.eventStats as EventStatsData) || {};
+
+  const bestScore = Object.entries(athleteStats)
+    .filter(([event]) => event !== 'ALL_AROUND')
+    .flatMap(([, data]) => data.scoreProgression?.map(s => s.score) || [])
+    .reduce((max, score) => Math.max(max, score), 0);
+
+  const aaPeak = athleteStats?.ALL_AROUND?.scoreProgression?.[0]?.score || 0;
+
+  return (
+    <div className="space-y-8 max-w-4xl mx-auto">
+      {/* Profile Card */}
+      <div className="bg-[#111111] border border-[#1f1f1f] rounded-xl p-8">
+        {/* Header */}
+        <div className="flex gap-6 items-start mb-8">
+          {/* Avatar */}
+          <div className="flex-shrink-0">
+            {athlete.profilePictureUrl ? (
+              <img
+                src={athlete.profilePictureUrl}
+                alt={athlete.firstName}
+                className="w-28 h-28 rounded-xl object-cover"
+              />
+            ) : (
+              <div className="w-28 h-28 rounded-xl bg-[#1f1f1f] text-[#5EFF6E] heading-display text-3xl flex items-center justify-center">
+                {initials}
+              </div>
+            )}
           </div>
 
-          {/* Profile Picture */}
-          <div>
-            <label className="input-label">Profile Picture URL</label>
-            <input {...register('profilePictureUrl')} type="url" className="input-field" placeholder="https://example.com/photo.jpg (optional)" disabled={isSubmitting} />
-            {errors.profilePictureUrl && <p className="text-red-400 text-sm mt-1">{errors.profilePictureUrl.message}</p>}
-          </div>
-
-          {/* Instagram */}
-          <div>
-            <label className="input-label">Instagram Handle</label>
-            <div className="flex items-center">
-              <span className="px-3 py-3.5 text-gray-400 bg-[#0a0a0a] border-r-0 border border-[#5EFF6E]/15 rounded-l-lg">@</span>
-              <input {...register('instagramHandle')} type="text" className="input-field rounded-l-none" placeholder="yourhandle (optional)" disabled={isSubmitting} />
+          {/* Info */}
+          <div className="flex-1">
+            <h1 className="heading-display text-4xl text-white mb-2">
+              {athlete.firstName} {athlete.lastName}
+            </h1>
+            <div className="flex items-center gap-2 mb-3">
+              {athlete.instagramHandle && (
+                <a
+                  href={`https://instagram.com/${athlete.instagramHandle}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#5EFF6E] hover:underline text-sm"
+                >
+                  Instagram
+                </a>
+              )}
             </div>
-            {errors.instagramHandle && <p className="text-red-400 text-sm mt-1">{errors.instagramHandle.message}</p>}
+            <p className="text-gray-400 text-sm mb-4">
+              {athlete.clubName} · {athlete.city}, {athlete.state} · Class of {athlete.gradYear}
+            </p>
+            {athlete.bio && <p className="text-gray-300 text-sm max-w-lg">{athlete.bio}</p>}
+          </div>
+        </div>
+
+        {/* Stats Row */}
+        <div className="grid grid-cols-3 gap-4 mb-8 pb-8 border-b border-[#1f1f1f]">
+          {/* AA Peak */}
+          <div className="bg-[#0a0a0a] rounded-lg p-4 text-center">
+            <p className="text-gray-400 text-xs mb-2">All Around Peak</p>
+            <p className="text-[#5EFF6E] text-3xl font-bold">{aaPeak > 0 ? aaPeak.toFixed(2) : '—'}</p>
+          </div>
+
+          {/* Best Event */}
+          <div className="bg-[#0a0a0a] rounded-lg p-4 text-center">
+            <p className="text-gray-400 text-xs mb-2">Best Event Score</p>
+            <p className="text-[#5EFF6E] text-3xl font-bold">{bestScore > 0 ? bestScore.toFixed(2) : '—'}</p>
           </div>
 
           {/* Commit Status */}
-          <div>
-            <label className="input-label">Recruiting Status</label>
-            <select {...register('commitStatus')} className="input-field" disabled={isSubmitting}>
-              <option value="">Not set</option>
-              <option value="OPEN">Open to Recruiting</option>
-              <option value="VERBALLY_COMMITTED">Verbally Committed</option>
-              <option value="SIGNED">Signed</option>
-              <option value="NOT_RECRUITING">Not Recruiting</option>
-            </select>
-            {errors.commitStatus && <p className="text-red-400 text-sm mt-1">{errors.commitStatus.message}</p>}
+          <div className={`rounded-lg p-4 text-center ${athlete.commitStatus ? COMMIT_STATUS_CONFIG[athlete.commitStatus].className : 'bg-[#0a0a0a] text-gray-400'}`}>
+            <p className="text-xs mb-2">Status</p>
+            <p className="font-semibold">{athlete.commitStatus ? COMMIT_STATUS_CONFIG[athlete.commitStatus].label : 'Not set'}</p>
+          </div>
+        </div>
+
+        {/* Two-column content */}
+        <div className="grid grid-cols-3 gap-6 mb-8">
+          {/* Chart */}
+          <div className="col-span-2">
+            <h2 className="text-body-bold text-lg mb-4 text-white">Score Progression</h2>
+            {Object.keys(athleteStats).length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <LineChart data={prepareChartData(athleteStats)}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1f1f1f" />
+                  <XAxis dataKey="date" stroke="#a0a0a0" tick={{ fontSize: 12 }} />
+                  <YAxis stroke="#a0a0a0" tick={{ fontSize: 12 }} domain={[0, 17.5]} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#0a0a0a', border: '1px solid #1f1f1f' }}
+                    labelStyle={{ color: '#ffffff' }}
+                  />
+                  <Legend />
+                  {Object.entries(athleteStats)
+                    .filter(([event]) => event !== 'ALL_AROUND')
+                    .map(([event]) => (
+                      <Line
+                        key={event}
+                        type="monotone"
+                        dataKey={event}
+                        stroke={event === 'FLOOR' ? '#5EFF6E' : '#8a8a8a'}
+                        isAnimationActive={false}
+                        dot={false}
+                      />
+                    ))}
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="bg-[#0a0a0a] rounded-lg p-8 text-center text-gray-400">
+                Add your first meet to see score progression
+              </div>
+            )}
           </div>
 
-          <button type="submit" disabled={isSubmitting} className="btn-primary w-full">
-            {isSubmitting ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="spinner border-[#0a0a0a]"></span>
-                {isEditMode ? 'Saving...' : 'Creating Profile...'}
-              </span>
-            ) : isEditMode ? (
-              'Save Changes'
-            ) : (
-              'Complete Profile'
-            )}
-          </button>
-        </form>
+          {/* Recent Meets */}
+          <div>
+            <h2 className="text-body-bold text-lg mb-4 text-white">Recent Meets</h2>
+            <div className="space-y-3">
+              {groupResultsByMeet(results).slice(0, 3).length > 0 ? (
+                groupResultsByMeet(results).slice(0, 3).map((meet, idx) => (
+                  <div key={idx} className="bg-[#0a0a0a] rounded-lg p-4">
+                    <p className="text-white text-sm font-semibold">{meet.meetName}</p>
+                    <p className="text-gray-400 text-xs mb-2">{new Date(meet.meetDate).toLocaleDateString()}</p>
+                    <div className="grid grid-cols-2 gap-1 text-xs">
+                      {['FLOOR', 'POMMEL_HORSE', 'RINGS', 'VAULT', 'PARALLEL_BARS', 'HIGH_BAR'].map((eventType: string) => {
+                        const result = meet.eventResults[eventType as EventType];
+                        return (
+                          <div key={eventType}>
+                            <p className="text-gray-500">{eventType.split('_')[0].slice(0, 2)}</p>
+                            <p className="text-[#5EFF6E] font-semibold">{result ? result.score.toFixed(2) : '—'}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {meet.allAroundScore && (
+                      <div className="mt-2 pt-2 border-t border-[#1f1f1f]">
+                        <p className="text-[#5EFF6E] text-xs font-bold">AA: {meet.allAroundScore.toFixed(2)}</p>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="bg-[#0a0a0a] rounded-lg p-8 text-center text-gray-400 text-sm">
+                  Your recent meets will appear here
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Edit Button */}
+        <button
+          onClick={() => setIsEditModalOpen(true)}
+          className="btn-secondary w-full"
+        >
+          Edit Profile
+        </button>
       </div>
+
+      {/* Edit Modal */}
+      <ProfileFormModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSuccess={(updatedProfile) => {
+          setAthlete(updatedProfile);
+          setIsEditModalOpen(false);
+        }}
+        existingProfile={athlete}
+      />
     </div>
   );
+}
+
+function groupResultsByMeet(results: CompetitionResult[]) {
+  const grouped = new Map<string, CompetitionResult[]>();
+  results.forEach((result) => {
+    const key = `${result.meetName}|${result.meetDate}`;
+    if (!grouped.has(key)) {
+      grouped.set(key, []);
+    }
+    grouped.get(key)!.push(result);
+  });
+
+  return Array.from(grouped.values()).map((meetResults) => {
+    const firstResult = meetResults[0];
+    const byEvent: Record<EventType, CompetitionResult> = {} as Record<EventType, CompetitionResult>;
+    let allAroundResult: CompetitionResult | undefined;
+
+    meetResults.forEach((result) => {
+      if (result.eventType === 'ALL_AROUND') {
+        allAroundResult = result;
+      } else {
+        byEvent[result.eventType] = result;
+      }
+    });
+
+    return {
+      meetName: firstResult.meetName,
+      meetDate: firstResult.meetDate,
+      meetLocation: firstResult.location,
+      allAroundScore: allAroundResult?.score,
+      eventResults: byEvent,
+      allResults: meetResults,
+    };
+  });
+}
+
+function prepareChartData(eventStats: EventStatsData) {
+  const dateMap = new Map<string, any>();
+
+  Object.entries(eventStats).forEach(([event, data]) => {
+    if (event === 'ALL_AROUND') return;
+    if (!data.scoreProgression) return;
+
+    data.scoreProgression.forEach(({ score, date }) => {
+      const dateStr = date ? new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Unknown';
+      if (!dateMap.has(dateStr)) {
+        dateMap.set(dateStr, { date: dateStr });
+      }
+      dateMap.get(dateStr)![event] = score;
+    });
+  });
+
+  return Array.from(dateMap.values()).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 }
