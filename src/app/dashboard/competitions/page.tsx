@@ -100,7 +100,7 @@ export default function CompetitionsPage() {
   const [isEditMeetSubmitting, setIsEditMeetSubmitting] = useState(false);
 
   // Delete modal state
-  const [deletingResultId, setDeletingResultId] = useState<string | null>(null);
+  const [deletingMeetKey, setDeletingMeetKey] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleteSubmitting, setIsDeleteSubmitting] = useState(false);
 
@@ -260,18 +260,32 @@ export default function CompetitionsPage() {
     }
   }
 
-  // Delete result
-  async function confirmDelete() {
-    if (!athleteProfile || !deletingResultId) return;
+  // Delete entire meet
+  async function deleteMeet() {
+    if (!athleteProfile || !deletingMeetKey) return;
     try {
       setIsDeleteSubmitting(true);
-      await deleteCompetitionResult(athleteProfile.id, deletingResultId);
-      setResults((prev) => prev.filter((r) => r.id !== deletingResultId));
+      setSubmitError(null);
+
+      // Get all result IDs for this meet
+      const meetResults = results.filter(
+        (r) => `${r.meetName}|${r.meetDate}` === deletingMeetKey
+      );
+
+      // Delete each result in the meet
+      await Promise.all(
+        meetResults.map((r) => deleteCompetitionResult(athleteProfile.id, r.id))
+      );
+
+      // Remove the meet from the list
+      setResults((prev) =>
+        prev.filter((r) => `${r.meetName}|${r.meetDate}` !== deletingMeetKey)
+      );
       setIsDeleteModalOpen(false);
-      setDeletingResultId(null);
+      setDeletingMeetKey(null);
     } catch (error) {
       setSubmitError(
-        error instanceof Error ? error.message : 'Failed to delete result'
+        error instanceof Error ? error.message : 'Failed to delete meet'
       );
     } finally {
       setIsDeleteSubmitting(false);
@@ -496,11 +510,22 @@ export default function CompetitionsPage() {
                 className="bg-[#111111] border border-[#1f1f1f] rounded-lg p-6"
               >
                 {/* Meet Header */}
-                <div className="mb-4 pb-4 border-b border-[#1f1f1f]">
-                  <p className="text-body-bold text-white text-lg">{meet.meetName}</p>
-                  <p className="text-gray-400 text-sm">
-                    {new Date(meet.meetDate).toLocaleDateString()} • {meet.meetLocation}
-                  </p>
+                <div className="mb-4 pb-4 border-b border-[#1f1f1f] flex items-start justify-between">
+                  <div>
+                    <p className="text-body-bold text-white text-lg">{meet.meetName}</p>
+                    <p className="text-gray-400 text-sm">
+                      {new Date(meet.meetDate).toLocaleDateString()} • {meet.meetLocation}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setDeletingMeetKey(`${meet.meetName}|${meet.meetDate}`);
+                      setIsDeleteModalOpen(true);
+                    }}
+                    className="text-red-500 hover:text-red-400 text-sm font-medium transition-colors flex-shrink-0"
+                  >
+                    Delete
+                  </button>
                 </div>
 
                 {/* Event Scores Grid */}
@@ -727,45 +752,45 @@ export default function CompetitionsPage() {
       )}
 
       {/* Delete Confirmation Modal */}
-      {isDeleteModalOpen && deletingResultId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[#111111] border border-[#1f1f1f] rounded-lg p-8 max-w-md w-full mx-4">
-            <h2 className="text-body-bold text-2xl mb-4 text-white">Delete Result</h2>
-            {results.find((r) => r.id === deletingResultId) && (
-              <>
-                <p className="text-gray-400 mb-2">
-                  Are you sure you want to delete this result?
-                </p>
+      {isDeleteModalOpen && deletingMeetKey && (() => {
+        const meetResults = results.filter(r => `${r.meetName}|${r.meetDate}` === deletingMeetKey);
+        const firstResult = meetResults[0];
+        return (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-[#111111] border border-[#1f1f1f] rounded-lg p-8 max-w-md w-full mx-4">
+              <h2 className="text-body-bold text-2xl mb-4 text-white">Delete Meet</h2>
+              <p className="text-gray-400 mb-2">
+                Are you sure you want to delete this meet? This will remove all {meetResults.length} event results.
+              </p>
+              {firstResult && (
                 <div className="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-3 mb-6">
-                  <p className="text-white text-sm font-medium">{results.find((r) => r.id === deletingResultId)?.meetName}</p>
-                  <p className="text-[#5EFF6E] text-sm">
-                    {EVENT_DISPLAY_NAMES[results.find((r) => r.id === deletingResultId)?.eventType as EventType]} - {results.find((r) => r.id === deletingResultId)?.score}
-                  </p>
+                  <p className="text-white text-sm font-medium">{firstResult.meetName}</p>
+                  <p className="text-gray-400 text-xs">{new Date(firstResult.meetDate).toLocaleDateString()}</p>
                 </div>
-              </>
-            )}
-            <div className="flex gap-4">
-              <button
-                onClick={confirmDelete}
-                disabled={isDeleteSubmitting}
-                className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded font-medium flex-1 transition"
-              >
-                {isDeleteSubmitting ? 'Deleting...' : 'Delete'}
-              </button>
-              <button
-                onClick={() => {
-                  setIsDeleteModalOpen(false);
-                  setDeletingResultId(null);
-                }}
-                disabled={isDeleteSubmitting}
-                className="btn-secondary flex-1"
-              >
-                Cancel
-              </button>
+              )}
+              <div className="flex gap-4">
+                <button
+                  onClick={deleteMeet}
+                  disabled={isDeleteSubmitting}
+                  className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded font-medium flex-1 transition"
+                >
+                  {isDeleteSubmitting ? 'Deleting...' : 'Delete Meet'}
+                </button>
+                <button
+                  onClick={() => {
+                    setIsDeleteModalOpen(false);
+                    setDeletingMeetKey(null);
+                  }}
+                  disabled={isDeleteSubmitting}
+                  className="btn-secondary flex-1"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Add Meet Modal */}
       {isAddMeetModalOpen && (
