@@ -106,6 +106,7 @@ export function ProfileFormModal({
         ...data,
         profilePictureUrl: data.profilePictureUrl || undefined,
         instagramHandle: data.instagramHandle || undefined,
+        commitStatus: data.commitStatus || undefined,
       };
 
       let result: AthleteProfile;

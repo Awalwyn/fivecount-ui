@@ -5,15 +5,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { getAthleteByUserId, AthleteProfile, CommitStatus } from '@/lib/api/athletes';
 import { getCompetitionResults, CompetitionResult, EventType } from '@/lib/api/competitions';
 import { ProfileFormModal } from '@/components/ProfileFormModal';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-
-interface EventStatData {
-  average: number;
-  attemptCount: number;
-  scoreProgression: Array<{ score: number; date?: string }>;
-}
-
-type EventStatsData = Record<EventType, EventStatData>;
 
 const COMMIT_STATUS_CONFIG: Record<CommitStatus, { label: string; className: string }> = {
   OPEN: { label: 'Open to Recruiting', className: 'text-[#5EFF6E] bg-[#5EFF6E]/10 border border-[#5EFF6E]/30' },
@@ -162,14 +153,15 @@ export default function ProfilePage() {
 
   // Profile exists - show full social media profile view
   const initials = `${athlete.firstName[0]}${athlete.lastName[0]}`.toUpperCase();
-  const athleteStats = (athlete.eventStats as EventStatsData) || {};
 
-  const bestScore = Object.entries(athleteStats)
-    .filter(([event]) => event !== 'ALL_AROUND')
-    .flatMap(([, data]) => data.scoreProgression?.map(s => s.score) || [])
-    .reduce((max, score) => Math.max(max, score), 0);
+  // Calculate stats from actual competition results
+  const aaPeak = results
+    .filter(r => r.eventType === 'ALL_AROUND')
+    .reduce((max, r) => Math.max(max, r.score), 0);
 
-  const aaPeak = athleteStats?.ALL_AROUND?.scoreProgression?.[0]?.score || 0;
+  const bestScore = results
+    .filter(r => r.eventType !== 'ALL_AROUND')
+    .reduce((max, r) => Math.max(max, r.score), 0);
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
@@ -237,75 +229,57 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Two-column content */}
+        {/* Two-column content: Chart + Posts (left), Recent Meets (right) */}
         <div className="grid grid-cols-3 gap-6 mb-8">
-          {/* Chart */}
+          {/* Left column: Score Progression Chart */}
           <div className="col-span-2">
             <h2 className="text-body-bold text-lg mb-4 text-white">Score Progression</h2>
-            {Object.keys(athleteStats).length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <LineChart data={prepareChartData(athleteStats)}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1f1f1f" />
-                  <XAxis dataKey="date" stroke="#a0a0a0" tick={{ fontSize: 12 }} />
-                  <YAxis stroke="#a0a0a0" tick={{ fontSize: 12 }} domain={[0, 17.5]} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#0a0a0a', border: '1px solid #1f1f1f' }}
-                    labelStyle={{ color: '#ffffff' }}
-                  />
-                  <Legend />
-                  {Object.entries(athleteStats)
-                    .filter(([event]) => event !== 'ALL_AROUND')
-                    .map(([event]) => (
-                      <Line
-                        key={event}
-                        type="monotone"
-                        dataKey={event}
-                        stroke={event === 'FLOOR' ? '#5EFF6E' : '#8a8a8a'}
-                        isAnimationActive={false}
-                        dot={false}
-                      />
-                    ))}
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="bg-[#0a0a0a] rounded-lg p-8 text-center text-gray-400">
-                Add your first meet to see score progression
-              </div>
-            )}
+            <div className="bg-[#0a0a0a] rounded-lg p-8 text-center text-gray-400">
+              Add your first meet to see score progression
+            </div>
           </div>
 
-          {/* Recent Posts */}
+          {/* Right column: Up to 3 Recent Meets stacked */}
           <div>
-            <h2 className="text-body-bold text-lg mb-4 text-white">Recent Posts</h2>
+            <h2 className="text-body-bold text-lg mb-4 text-white">Recent Meets</h2>
             <div className="space-y-3">
-              {groupResultsByMeet(results).slice(0, 3).length > 0 ? (
-                groupResultsByMeet(results).slice(0, 3).map((meet, idx) => (
-                  <div key={idx} className="bg-[#0a0a0a] rounded-lg p-4">
-                    <p className="text-white text-sm font-semibold">{meet.meetName}</p>
-                    <p className="text-gray-400 text-xs mb-2">{new Date(meet.meetDate).toLocaleDateString()}</p>
-                    <div className="grid grid-cols-2 gap-1 text-xs">
-                      {['FLOOR', 'POMMEL_HORSE', 'RINGS', 'VAULT', 'PARALLEL_BARS', 'HIGH_BAR'].map((eventType: string) => {
-                        const result = meet.eventResults[eventType as EventType];
-                        return (
-                          <div key={eventType}>
-                            <p className="text-gray-500">{eventType.split('_')[0].slice(0, 2)}</p>
-                            <p className="text-[#5EFF6E] font-semibold">{result ? result.score.toFixed(2) : '—'}</p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {meet.allAroundScore && (
-                      <div className="mt-2 pt-2 border-t border-[#1f1f1f]">
-                        <p className="text-[#5EFF6E] text-xs font-bold">AA: {meet.allAroundScore.toFixed(2)}</p>
+              {(() => {
+                const sortedResults = [...results].sort(
+                  (a, b) => new Date(b.meetDate).getTime() - new Date(a.meetDate).getTime()
+                );
+                const recentMeets = groupResultsByMeet(sortedResults).slice(0, 3);
+                return recentMeets.length > 0 ? (
+                  recentMeets.map((meet, idx) => (
+                    <div key={idx} className="bg-[#0a0a0a] rounded-lg p-4">
+                      <p className="text-white text-sm font-semibold">{meet.meetName}</p>
+                      <p className="text-gray-400 text-xs mb-2">
+                        {new Date(meet.meetDate).toLocaleDateString()}
+                        {meet.meetLocation && ` · ${meet.meetLocation}`}
+                      </p>
+                      <div className="grid grid-cols-2 gap-1 text-xs">
+                        {['FLOOR', 'POMMEL_HORSE', 'RINGS', 'VAULT', 'PARALLEL_BARS', 'HIGH_BAR'].map((eventType: string) => {
+                          const result = meet.eventResults[eventType as EventType];
+                          return (
+                            <div key={eventType}>
+                              <p className="text-gray-500">{eventType.split('_')[0].slice(0, 2)}</p>
+                              <p className="text-[#5EFF6E] font-semibold">{result ? result.score.toFixed(2) : '—'}</p>
+                            </div>
+                          );
+                        })}
                       </div>
-                    )}
+                      {meet.allAroundScore && (
+                        <div className="mt-2 pt-2 border-t border-[#1f1f1f]">
+                          <p className="text-[#5EFF6E] text-xs font-bold">AA: {meet.allAroundScore.toFixed(2)}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="bg-[#0a0a0a] rounded-lg p-8 text-center text-gray-400 text-sm">
+                    Your recent meets will appear here
                   </div>
-                ))
-              ) : (
-                <div className="bg-[#0a0a0a] rounded-lg p-8 text-center text-gray-400 text-sm">
-                  Your recent meets will appear here
-                </div>
-              )}
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -367,21 +341,3 @@ function groupResultsByMeet(results: CompetitionResult[]) {
   });
 }
 
-function prepareChartData(eventStats: EventStatsData) {
-  const dateMap = new Map<string, any>();
-
-  Object.entries(eventStats).forEach(([event, data]) => {
-    if (event === 'ALL_AROUND') return;
-    if (!data.scoreProgression) return;
-
-    data.scoreProgression.forEach(({ score, date }) => {
-      const dateStr = date ? new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Unknown';
-      if (!dateMap.has(dateStr)) {
-        dateMap.set(dateStr, { date: dateStr });
-      }
-      dateMap.get(dateStr)![event] = score;
-    });
-  });
-
-  return Array.from(dateMap.values()).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-}
