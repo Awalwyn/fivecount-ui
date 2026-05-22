@@ -4,10 +4,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import {
-  addCompetitionResult,
   addMeet,
   getCompetitionResults,
   updateCompetitionResult,
@@ -16,6 +16,7 @@ import {
   EventType,
 } from '@/lib/api/competitions';
 import { getAthleteByUserId, AthleteProfile } from '@/lib/api/athletes';
+import { PostComposerModal } from '@/components/PostComposerModal';
 
 const EVENT_DISPLAY_NAMES: Record<EventType, string> = {
   ALL_AROUND: 'All Around',
@@ -46,29 +47,6 @@ const addMeetSchema = z.object({
   { message: 'At least one event score is required' }
 );
 
-type AddMeetFormData = z.infer<typeof addMeetSchema>;
-
-// Keep old schema for edit modal
-const competitionResultSchema = z.object({
-  meetName: z.string().min(1, 'Meet name is required').max(100),
-  meetDate: z.string().min(1, 'Meet date is required').refine(
-    (date) => new Date(date) <= new Date(),
-    'Meet date cannot be in the future'
-  ),
-  location: z.string().min(1, 'Location is required').max(100),
-  eventType: z.enum([
-    'ALL_AROUND',
-    'FLOOR',
-    'POMMEL_HORSE',
-    'RINGS',
-    'VAULT',
-    'PARALLEL_BARS',
-    'HIGH_BAR',
-  ]),
-  score: z.number().min(0, 'Score cannot be negative').max(20, 'Score cannot exceed 20'),
-});
-
-type CompetitionResultFormData = z.infer<typeof competitionResultSchema>;
 
 export default function CompetitionsPage() {
   const router = useRouter();
@@ -84,18 +62,12 @@ export default function CompetitionsPage() {
   const [resultsLoading, setResultsLoading] = useState(true);
 
   // Form submission state
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  // Edit single result modal state
-  const [editingResult, setEditingResult] = useState<CompetitionResult | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
-
   // Edit meet modal state
-  const [editingMeetKey, setEditingMeetKey] = useState<string | null>(null);
   const [editingMeetResults, setEditingMeetResults] = useState<CompetitionResult[]>([]);
+  const [editScores, setEditScores] = useState<Record<string, string>>({});
   const [isEditMeetModalOpen, setIsEditMeetModalOpen] = useState(false);
   const [isEditMeetSubmitting, setIsEditMeetSubmitting] = useState(false);
 
@@ -107,6 +79,11 @@ export default function CompetitionsPage() {
   // Add Meet modal state
   const [isAddMeetModalOpen, setIsAddMeetModalOpen] = useState(false);
   const [isAddMeetSubmitting, setIsAddMeetSubmitting] = useState(false);
+
+  // Post composer state
+  const [isPostComposerOpen, setIsPostComposerOpen] = useState(false);
+  const [postComposerMeetKey, setPostComposerMeetKey] = useState<string | null>(null);
+  const [openMeetMenu, setOpenMeetMenu] = useState<string | null>(null);
 
   // Initialize Add Meet form
   const {
@@ -127,33 +104,6 @@ export default function CompetitionsPage() {
       parallelBars: '',
       highBar: '',
     },
-  });
-
-  // Initialize form
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-  } = useForm<CompetitionResultFormData>({
-    resolver: zodResolver(competitionResultSchema),
-    defaultValues: {
-      meetName: '',
-      meetDate: '',
-      location: '',
-      eventType: 'FLOOR',
-      score: 0,
-    },
-  });
-
-  // Edit form
-  const {
-    register: registerEdit,
-    handleSubmit: handleEditSubmit,
-    formState: { errors: editErrors },
-    reset: resetEdit,
-  } = useForm<CompetitionResultFormData>({
-    resolver: zodResolver(competitionResultSchema),
   });
 
   // Fetch athlete profile on mount
@@ -188,26 +138,6 @@ export default function CompetitionsPage() {
     loadResults();
   }, [athleteProfile]);
 
-  // Add new result
-  async function onSubmit(data: CompetitionResultFormData) {
-    if (!athleteProfile) return;
-    try {
-      setIsSubmitting(true);
-      setSubmitError(null);
-      const newResult = await addCompetitionResult(athleteProfile.id, data);
-      setResults((prev) => [newResult, ...prev].sort((a, b) => new Date(b.meetDate).getTime() - new Date(a.meetDate).getTime()));
-      reset();
-      setSubmitSuccess(true);
-      setTimeout(() => setSubmitSuccess(false), 3000);
-    } catch (error) {
-      setSubmitError(
-        error instanceof Error ? error.message : 'Failed to add competition result'
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
   // Add new meet
   async function onAddMeet(data: any) {
     if (!athleteProfile) return;
@@ -240,26 +170,6 @@ export default function CompetitionsPage() {
     }
   }
 
-  // Update result
-  async function onEditSubmit(data: CompetitionResultFormData) {
-    if (!athleteProfile || !editingResult) return;
-    try {
-      setIsEditSubmitting(true);
-      const updatedResult = await updateCompetitionResult(athleteProfile.id, editingResult.id, data);
-      setResults((prev) =>
-        prev.map((r) => (r.id === editingResult.id ? updatedResult : r))
-      );
-      setIsEditModalOpen(false);
-      setEditingResult(null);
-    } catch (error) {
-      setSubmitError(
-        error instanceof Error ? error.message : 'Failed to update result'
-      );
-    } finally {
-      setIsEditSubmitting(false);
-    }
-  }
-
   // Delete entire meet
   async function deleteMeet() {
     if (!athleteProfile || !deletingMeetKey) return;
@@ -272,8 +182,8 @@ export default function CompetitionsPage() {
         (r) => `${r.meetName}|${r.meetDate}` === deletingMeetKey
       );
 
-      // Delete each result in the meet
-      await Promise.all(
+      // Use allSettled so a 404 on the auto-calculated ALL_AROUND result doesn't block the rest
+      await Promise.allSettled(
         meetResults.map((r) => deleteCompetitionResult(athleteProfile.id, r.id))
       );
 
@@ -292,32 +202,16 @@ export default function CompetitionsPage() {
     }
   }
 
-  // Open edit modal with pre-filled form
-  function openEditModal(result: CompetitionResult) {
-    setEditingResult(result);
-    resetEdit({
-      meetName: result.meetName,
-      meetDate: result.meetDate,
-      location: result.location,
-      eventType: result.eventType,
-      score: result.score,
-    });
-    setIsEditModalOpen(true);
-  }
-
   // Open meet edit modal
   function openEditMeetModal(meet: ReturnType<typeof groupResultsByMeet>[0]) {
-    const key = `${meet.meetName}|${meet.meetDate}`;
-    setEditingMeetKey(key);
-    setEditingMeetResults(meet.allResults.filter(r => r.eventType !== 'ALL_AROUND'));
+    const nonAaResults = meet.allResults.filter(r => r.eventType !== 'ALL_AROUND');
+    setEditingMeetResults(nonAaResults);
+    const scores: Record<string, string> = {};
+    nonAaResults.forEach(r => {
+      scores[r.eventType] = r.score.toString();
+    });
+    setEditScores(scores);
     setIsEditMeetModalOpen(true);
-  }
-
-  // Update a single event score in the meet editor
-  function updateMeetEventScore(eventType: EventType, newScore: number | null) {
-    setEditingMeetResults(prev =>
-      prev.map(r => r.eventType === eventType ? { ...r, score: newScore ?? r.score } : r)
-    );
   }
 
   // Save all edits from meet modal
@@ -327,10 +221,19 @@ export default function CompetitionsPage() {
       setIsEditMeetSubmitting(true);
       setSubmitError(null);
 
-      // Update each result that might have changed
-      const updatePromises = editingMeetResults.map(result =>
-        updateCompetitionResult(athleteProfile.id, result.id, { score: result.score })
-      );
+      const updatePromises = editingMeetResults.map(result => {
+        const scoreStr = editScores[result.eventType];
+        const parsedScore = scoreStr !== undefined && scoreStr !== '' ? parseFloat(scoreStr) : result.score;
+        if (isNaN(parsedScore)) return Promise.resolve();
+        console.log('[edit save]', { athleteId: athleteProfile.id, resultId: result.id, eventType: result.eventType, parsedScore, fullResult: result });
+        return updateCompetitionResult(athleteProfile.id, result.id, {
+          score: parsedScore,
+          meetName: result.meetName,
+          meetDate: result.meetDate,
+          location: result.location,
+          eventType: result.eventType,
+        });
+      });
 
       await Promise.all(updatePromises);
 
@@ -339,8 +242,8 @@ export default function CompetitionsPage() {
       setResults(updatedResults.sort((a, b) => new Date(b.meetDate).getTime() - new Date(a.meetDate).getTime()));
 
       setIsEditMeetModalOpen(false);
-      setEditingMeetKey(null);
       setEditingMeetResults([]);
+      setEditScores({});
     } catch (error) {
       setSubmitError(
         error instanceof Error ? error.message : 'Failed to save meet changes'
@@ -476,11 +379,11 @@ export default function CompetitionsPage() {
                 className="bg-[#111111] border border-[#1f1f1f] rounded-lg p-6"
               >
                 <p className="text-gray-400 text-sm mb-2">{EVENT_DISPLAY_NAMES[stat.event]}</p>
-                <p className="text-[#5EFF6E] text-3xl font-bold">{stat.average}</p>
+                <p className="text-[#5EFF6E] text-3xl font-bold">{stat.average.toFixed(2)}</p>
                 <p className="text-gray-500 text-sm mt-2">
                   avg ({stat.count} {stat.count === 1 ? 'meet' : 'meets'})
                 </p>
-                <p className="text-gray-400 text-sm">Best: {stat.best}</p>
+                <p className="text-gray-400 text-sm">Best: {stat.best.toFixed(2)}</p>
               </div>
             ))}
           </div>
@@ -517,15 +420,50 @@ export default function CompetitionsPage() {
                       {new Date(meet.meetDate).toLocaleDateString()} • {meet.meetLocation}
                     </p>
                   </div>
-                  <button
-                    onClick={() => {
-                      setDeletingMeetKey(`${meet.meetName}|${meet.meetDate}`);
-                      setIsDeleteModalOpen(true);
-                    }}
-                    className="text-red-500 hover:text-red-400 text-sm font-medium transition-colors flex-shrink-0"
-                  >
-                    Delete
-                  </button>
+                  <div className="flex gap-2 flex-shrink-0 relative">
+                    {/* Three-dot menu */}
+                    <button
+                      onClick={() => setOpenMeetMenu(openMeetMenu === `${meet.meetName}|${meet.meetDate}` ? null : `${meet.meetName}|${meet.meetDate}`)}
+                      className="text-gray-400 hover:text-white text-lg px-2 py-1 transition-colors"
+                      title="More options"
+                    >
+                      ⋮
+                    </button>
+                    {openMeetMenu === `${meet.meetName}|${meet.meetDate}` && (
+                      <div className="absolute right-0 top-8 bg-[#1f1f1f] border border-[#2a2a2a] rounded-lg py-1 z-10 min-w-[160px] shadow-lg">
+                        <button
+                          onClick={() => {
+                            setPostComposerMeetKey(`${meet.meetName}|${meet.meetDate}`);
+                            setIsPostComposerOpen(true);
+                            setOpenMeetMenu(null);
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-[#2a2a2a] transition-colors"
+                        >
+                          Post Meet Card
+                        </button>
+                        <button
+                          onClick={() => {
+                            setPostComposerMeetKey(`${meet.meetName}|${meet.meetDate}`);
+                            setIsPostComposerOpen(true);
+                            setOpenMeetMenu(null);
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-[#2a2a2a] transition-colors"
+                        >
+                          Post Score Highlight
+                        </button>
+                      </div>
+                    )}
+                    {/* Delete button */}
+                    <button
+                      onClick={() => {
+                        setDeletingMeetKey(`${meet.meetName}|${meet.meetDate}`);
+                        setIsDeleteModalOpen(true);
+                      }}
+                      className="text-red-500 hover:text-red-400 text-sm font-medium transition-colors px-2 py-1"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
 
                 {/* Event Scores Grid */}
@@ -536,7 +474,7 @@ export default function CompetitionsPage() {
                       <div key={eventType} className="text-center">
                         <p className="text-gray-400 text-xs mb-1">{EVENT_DISPLAY_NAMES[eventType]}</p>
                         <p className="text-[#5EFF6E] text-xl font-bold">
-                          {result ? result.score : '—'}
+                          {result ? result.score.toFixed(2) : '—'}
                         </p>
                       </div>
                     );
@@ -547,7 +485,7 @@ export default function CompetitionsPage() {
                 {meet.allAroundScore !== undefined && (
                   <div className="bg-[#0a0a0a] rounded-lg px-4 py-2 mb-2 border border-[#5EFF6E]/20 text-center">
                     <p className="text-gray-400 text-xs mb-0.5">All Around</p>
-                    <p className="text-[#5EFF6E] text-lg font-bold">{meet.allAroundScore}</p>
+                    <p className="text-[#5EFF6E] text-lg font-bold">{meet.allAroundScore.toFixed(2)}</p>
                   </div>
                 )}
 
@@ -566,156 +504,33 @@ export default function CompetitionsPage() {
         )}
       </div>
 
-      {/* Edit Modal */}
-      {isEditModalOpen && editingResult && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[#111111] border border-[#1f1f1f] rounded-lg p-8 max-w-2xl w-full mx-4">
-            <h2 className="text-body-bold text-2xl mb-6 text-white">Edit Result</h2>
-
-            <form onSubmit={handleEditSubmit(onEditSubmit)} className="space-y-6">
-              {/* Meet Name & Date Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="input-label">Meet Name</label>
-                  <input
-                    {...registerEdit('meetName')}
-                    type="text"
-                    className="input-field"
-                    disabled={isEditSubmitting}
-                  />
-                  {editErrors.meetName && (
-                    <p className="text-red-400 text-sm mt-1">{editErrors.meetName.message}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="input-label">Meet Date</label>
-                  <input
-                    {...registerEdit('meetDate')}
-                    type="date"
-                    className="input-field"
-                    disabled={isEditSubmitting}
-                  />
-                  {editErrors.meetDate && (
-                    <p className="text-red-400 text-sm mt-1">{editErrors.meetDate.message}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Location */}
-              <div>
-                <label className="input-label">Location</label>
-                <input
-                  {...registerEdit('location')}
-                  type="text"
-                  className="input-field"
-                  disabled={isEditSubmitting}
-                />
-                {editErrors.location && (
-                  <p className="text-red-400 text-sm mt-1">{editErrors.location.message}</p>
-                )}
-              </div>
-
-              {/* Event Type */}
-              <div>
-                <label className="input-label">Event</label>
-                <select
-                  {...registerEdit('eventType')}
-                  className="input-field"
-                  disabled={isEditSubmitting}
-                >
-                  {Object.entries(EVENT_DISPLAY_NAMES).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-                {editErrors.eventType && (
-                  <p className="text-red-400 text-sm mt-1">{editErrors.eventType.message}</p>
-                )}
-              </div>
-
-              {/* Score */}
-              <div>
-                <label className="input-label">Score</label>
-                <input
-                  {...registerEdit('score', { valueAsNumber: true })}
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="20"
-                  className="input-field"
-                  disabled={isEditSubmitting}
-                />
-                {editErrors.score && (
-                  <p className="text-red-400 text-sm mt-1">{editErrors.score.message}</p>
-                )}
-              </div>
-
-              {/* Modal Actions */}
-              <div className="flex gap-4">
-                <button
-                  type="submit"
-                  disabled={isEditSubmitting}
-                  className="btn-primary flex-1"
-                >
-                  {isEditSubmitting ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <span className="spinner border-[#0a0a0a]"></span>
-                      Saving
-                    </span>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEditModalOpen(false);
-                    setEditingResult(null);
-                  }}
-                  disabled={isEditSubmitting}
-                  className="btn-secondary flex-1"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* Edit Meet Modal */}
-      {isEditMeetModalOpen && editingMeetResults.length > 0 && (
+      {isEditMeetModalOpen && editingMeetResults.length > 0 && createPortal(
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-[#111111] border border-[#1f1f1f] rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <h2 className="text-body-bold text-2xl mb-2 text-white">Edit Meet Scores</h2>
-            <p className="text-gray-400 text-sm mb-6">
+            <p className="text-gray-400 text-sm mb-4">
               {editingMeetResults[0]?.meetName} • {new Date(editingMeetResults[0]?.meetDate).toLocaleDateString()}
             </p>
+            {submitError && <div className="error-message mb-4">{submitError}</div>}
 
             <div className="space-y-6 mb-6">
-              {(['FLOOR', 'POMMEL_HORSE', 'RINGS', 'VAULT', 'PARALLEL_BARS', 'HIGH_BAR'] as EventType[]).map((eventType) => {
-                const result = editingMeetResults.find(r => r.eventType === eventType);
-                return (
-                  <div key={eventType}>
-                    <label className="input-label">{EVENT_DISPLAY_NAMES[eventType]}</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="17.5"
-                      value={result?.score ?? ''}
-                      onChange={(e) => {
-                        const value = e.target.value === '' ? null : parseFloat(e.target.value);
-                        updateMeetEventScore(eventType, value);
-                      }}
-                      className="input-field"
-                      placeholder="e.g. 14.250"
-                      disabled={isEditMeetSubmitting}
-                    />
-                  </div>
-                );
-              })}
+              {(['FLOOR', 'POMMEL_HORSE', 'RINGS', 'VAULT', 'PARALLEL_BARS', 'HIGH_BAR'] as EventType[]).map((eventType) => (
+                <div key={eventType}>
+                  <label className="input-label">{EVENT_DISPLAY_NAMES[eventType]}</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="17.5"
+                    value={editScores[eventType] ?? ''}
+                    onChange={(e) => setEditScores(prev => ({ ...prev, [eventType]: e.target.value }))}
+                    className="input-field"
+                    placeholder="e.g. 14.250"
+                    disabled={isEditMeetSubmitting}
+                  />
+                </div>
+              ))}
             </div>
 
             {/* Modal Actions */}
@@ -738,8 +553,8 @@ export default function CompetitionsPage() {
                 type="button"
                 onClick={() => {
                   setIsEditMeetModalOpen(false);
-                  setEditingMeetKey(null);
                   setEditingMeetResults([]);
+                  setEditScores({});
                 }}
                 disabled={isEditMeetSubmitting}
                 className="btn-secondary flex-1"
@@ -748,17 +563,19 @@ export default function CompetitionsPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && deletingMeetKey && (() => {
         const meetResults = results.filter(r => `${r.meetName}|${r.meetDate}` === deletingMeetKey);
         const firstResult = meetResults[0];
-        return (
+        return createPortal(
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-[#111111] border border-[#1f1f1f] rounded-lg p-8 max-w-md w-full mx-4">
               <h2 className="text-body-bold text-2xl mb-4 text-white">Delete Meet</h2>
+              {submitError && <div className="error-message mb-4">{submitError}</div>}
               <p className="text-gray-400 mb-2">
                 Are you sure you want to delete this meet? This will remove all {meetResults.length} event results.
               </p>
@@ -788,12 +605,13 @@ export default function CompetitionsPage() {
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         );
       })()}
 
       {/* Add Meet Modal */}
-      {isAddMeetModalOpen && (
+      {isAddMeetModalOpen && createPortal(
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-[#111111] border border-[#1f1f1f] rounded-lg p-8 max-w-2xl w-full mx-4">
             <h2 className="text-body-bold text-2xl mb-6 text-white">Add Meet Results</h2>
@@ -969,7 +787,26 @@ export default function CompetitionsPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Post Composer Modal */}
+      {athleteProfile && (
+        <PostComposerModal
+          isOpen={isPostComposerOpen}
+          onClose={() => {
+            setIsPostComposerOpen(false);
+            setPostComposerMeetKey(null);
+          }}
+          onSuccess={() => {
+            setIsPostComposerOpen(false);
+            setPostComposerMeetKey(null);
+          }}
+          athleteResults={results}
+          prefilledMeetKey={postComposerMeetKey ?? undefined}
+          prefilledTab="meet"
+        />
       )}
     </div>
   );

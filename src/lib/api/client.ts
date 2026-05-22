@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -7,6 +7,7 @@ if (!API_BASE_URL) {
 }
 
 async function getAuthToken(): Promise<string> {
+  const supabase = createClient();
   const {
     data: { session },
     error,
@@ -42,6 +43,10 @@ export async function apiCall<T>(
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
       throw new Error(error.message || `API error: ${response.status}`);
+    }
+
+    if (response.status === 204 || response.headers.get('content-length') === '0') {
+      return null as T;
     }
 
     return response.json();

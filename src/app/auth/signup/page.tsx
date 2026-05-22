@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -37,6 +37,7 @@ export default function SignupPage() {
       setIsLoading(true);
       setError(null);
 
+      const supabase = createClient();
       const { error: signUpError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

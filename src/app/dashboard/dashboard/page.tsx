@@ -3,15 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { getAthleteByUserId, AthleteProfile } from '@/lib/api/athletes';
+import { getCompetitionResults, CompetitionResult } from '@/lib/api/competitions';
 import { ProfileFormModal } from '@/components/ProfileFormModal';
-
-interface EventStatsData {
-  [key: string]: {
-    average: number;
-    attemptCount: number;
-    scoreProgression: Array<{ score: number; date?: string }>;
-  };
-}
 
 const EVENT_DISPLAY_NAMES: Record<string, string> = {
   ALL_AROUND: 'All Around',
@@ -26,6 +19,7 @@ const EVENT_DISPLAY_NAMES: Record<string, string> = {
 export default function DashboardPage() {
   const { user } = useAuth();
   const [athlete, setAthlete] = useState<AthleteProfile | null>(null);
+  const [results, setResults] = useState<CompetitionResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -39,6 +33,15 @@ export default function DashboardPage() {
         setError(null);
         const data = await getAthleteByUserId(user.id);
         setAthlete(data);
+
+        // Fetch competition results
+        try {
+          const competitionData = await getCompetitionResults(data.id);
+          setResults(competitionData);
+        } catch (err) {
+          console.error('Failed to load results', err);
+          setResults([]);
+        }
       } catch (err) {
         // No profile yet - this is OK
         setError(
@@ -52,9 +55,9 @@ export default function DashboardPage() {
     loadAthlete();
   }, [user?.id]);
 
-  // Calculate overall stats
+  // Calculate overall stats from competition results
   const calculateOverallStats = () => {
-    if (!athlete?.eventStats) {
+    if (results.length === 0) {
       return {
         totalCompetitions: 0,
         avgScore: 0,
@@ -63,20 +66,17 @@ export default function DashboardPage() {
       };
     }
 
-    const eventStats = athlete.eventStats as EventStatsData;
-    const allScores: number[] = [];
-    let numEvents = 0;
-
-    Object.values(eventStats).forEach((stats) => {
-      if (stats.scoreProgression && Array.isArray(stats.scoreProgression)) {
-        stats.scoreProgression.forEach((item) => {
-          if (typeof item.score === 'number') {
-            allScores.push(item.score);
-          }
-        });
-        numEvents++;
+    const byEvent: Record<string, number[]> = {};
+    results.forEach((result) => {
+      if (result.eventType !== 'ALL_AROUND') {
+        if (!byEvent[result.eventType]) {
+          byEvent[result.eventType] = [];
+        }
+        byEvent[result.eventType].push(result.score);
       }
     });
+
+    const allScores = Object.values(byEvent).flat();
 
     return {
       totalCompetitions: allScores.length,
@@ -88,13 +88,28 @@ export default function DashboardPage() {
         allScores.length > 0
           ? Math.max(...allScores).toFixed(2)
           : 0,
-      numEvents,
+      numEvents: Object.keys(byEvent).length,
     };
   };
 
   const stats = calculateOverallStats();
   const hasProfile = athlete !== null && !error;
-  const eventStats = (athlete?.eventStats as EventStatsData) || {};
+
+  // Calculate stats by event from competition results
+  const calculateEventStats = () => {
+    const byEvent: Record<string, number[]> = {};
+    results.forEach((result) => {
+      if (result.eventType !== 'ALL_AROUND') {
+        if (!byEvent[result.eventType]) {
+          byEvent[result.eventType] = [];
+        }
+        byEvent[result.eventType].push(result.score);
+      }
+    });
+    return byEvent;
+  };
+
+  const eventStats = calculateEventStats();
 
   return (
     <div className="space-y-6">
@@ -226,16 +241,12 @@ export default function DashboardPage() {
                 Event Breakdown
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {Object.entries(eventStats).map(([eventType, stats]) => {
-                  const scores =
-                    stats.scoreProgression?.map((s) => s.score) || [];
+                {Object.entries(eventStats).map(([eventType, scores]) => {
                   const best =
                     scores.length > 0 ? Math.max(...scores).toFixed(2) : 'N/A';
                   const avg =
                     scores.length > 0
-                      ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(
-                          2
-                        )
+                      ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2)
                       : 'N/A';
 
                   return (
