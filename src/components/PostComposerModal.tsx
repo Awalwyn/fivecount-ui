@@ -92,7 +92,7 @@ export function PostComposerModal({
         imageUrl: activeTab === 'photo' ? imageUrl : undefined,
         videoUrl: activeTab === 'video' ? videoUrl : undefined,
         postType: activeTab === 'meet' ? ('SCORE_TILE' as const) : ('REGULAR' as const),
-        meetReference: activeTab === 'meet' ? selectedMeetKey : undefined,
+        meetReference: activeTab === 'meet' ? (selectedMeetKey || undefined) : undefined,
       };
 
       const result = await createPost(postData);
