@@ -8,9 +8,8 @@ if (!API_BASE_URL) {
   throw new Error('NEXT_PUBLIC_API_BASE_URL is not defined');
 }
 
-const supabase = createClient();
-
 async function getAuthToken(): Promise<string> {
+  const supabase = createClient();
   const {
     data: { session },
     error,
@@ -28,6 +27,7 @@ export async function apiCall<T>(
   options?: RequestInit
 ): Promise<T> {
   try {
+    const supabase = createClient();
     const token = await getAuthToken();
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
