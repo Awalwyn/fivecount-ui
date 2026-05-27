@@ -31,6 +31,7 @@ export async function createAthleteProfile(data: {
   bio: string;
   profilePictureUrl?: string;
   instagramHandle?: string;
+  commitStatus?: CommitStatus;
 }): Promise<AthleteProfile> {
   return apiCall<AthleteProfile>('/athletes/profile', {
     method: 'POST',

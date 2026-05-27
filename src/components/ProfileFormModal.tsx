@@ -232,6 +232,7 @@ export function ProfileFormModal({
               <option value="NOT_RECRUITING">Not Recruiting</option>
             </select>
             {errors.commitStatus && <p className="text-red-400 text-sm mt-1">{errors.commitStatus.message}</p>}
+            <p className="text-xs text-gray-500 mt-1">Your recruiting status visible to coaches</p>
           </div>
 
           {/* Action Buttons */}
