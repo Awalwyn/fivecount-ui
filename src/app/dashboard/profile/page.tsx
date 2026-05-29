@@ -366,7 +366,12 @@ export default function ProfilePage() {
           isOpen={isPostComposerOpen}
           onClose={() => setIsPostComposerOpen(false)}
           onSuccess={(newPost) => {
-            setPosts(prev => [newPost, ...prev]);
+            console.log('Post created:', newPost);
+            setPosts(prev => {
+              const updated = [newPost, ...prev];
+              console.log('Posts array updated:', updated);
+              return updated;
+            });
             setIsPostComposerOpen(false);
           }}
           athleteResults={results}

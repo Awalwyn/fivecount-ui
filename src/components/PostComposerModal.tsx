@@ -96,10 +96,13 @@ export function PostComposerModal({
       };
 
       const result = await createPost(postData);
+      console.log('Post created successfully:', result);
       onSuccess(result);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create post');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create post';
+      console.error('Post creation error:', err);
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

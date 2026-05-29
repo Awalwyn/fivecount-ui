@@ -21,9 +21,9 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, athleteResults = [], canDelete = false, onDelete }: PostCardProps) {
-  const initials = post.author
+  const initials = post.author && post.author.firstName && post.author.lastName
     ? `${post.author.firstName[0]}${post.author.lastName[0]}`.toUpperCase()
-    : '?';
+    : 'A';
 
   const renderMeetCard = () => {
     if (!post.meetReference) return null;
@@ -98,7 +98,7 @@ export function PostCard({ post, athleteResults = [], canDelete = false, onDelet
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-white text-sm font-semibold">
-              {post.author?.firstName} {post.author?.lastName}
+              {post.author ? `${post.author.firstName} ${post.author.lastName}` : 'Athlete'}
             </p>
             <p className="text-gray-500 text-xs">
               {new Date(post.createdAt).toLocaleDateString()} · {new Date(post.createdAt).toLocaleTimeString()}
