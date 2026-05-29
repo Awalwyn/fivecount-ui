@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { getAthleteByUserId, AthleteProfile, CommitStatus } from '@/lib/api/athletes';
+import { getAthleteByUserId, AthleteProfile } from '@/lib/api/athletes';
 import { getCompetitionResults, CompetitionResult, EventType } from '@/lib/api/competitions';
 import { getMyPosts, Post, deletePost } from '@/lib/api/posts';
 import { ProfileFormModal } from '@/components/ProfileFormModal';
 import { PostComposerModal } from '@/components/PostComposerModal';
 import { PostFeed } from '@/components/PostFeed';
+import { RecruitingStatusDisplay } from '@/components/RecruitingStatusBadge';
 import {
   LineChart,
   Line,
@@ -23,13 +24,6 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
 } from 'recharts';
-
-const COMMIT_STATUS_CONFIG: Record<CommitStatus, { label: string; className: string }> = {
-  OPEN: { label: 'Open to Recruiting', className: 'text-[#5EFF6E] bg-[#5EFF6E]/10 border border-[#5EFF6E]/30' },
-  VERBALLY_COMMITTED: { label: 'Verbally Committed', className: 'text-blue-400 bg-blue-400/10 border border-blue-400/30' },
-  SIGNED: { label: 'Signed', className: 'text-purple-400 bg-purple-400/10 border border-purple-400/30' },
-  NOT_RECRUITING: { label: 'Not Recruiting', className: 'text-gray-500 bg-gray-500/10 border border-gray-500/30' },
-};
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -254,9 +248,9 @@ export default function ProfilePage() {
           </div>
 
           {/* Commit Status */}
-          <div className={`rounded-lg p-4 text-center ${athlete.commitStatus ? COMMIT_STATUS_CONFIG[athlete.commitStatus].className : 'bg-[#0a0a0a] text-gray-400'}`}>
-            <p className="text-xs mb-2">Status</p>
-            <p className="font-semibold">{athlete.commitStatus ? COMMIT_STATUS_CONFIG[athlete.commitStatus].label : 'Not set'}</p>
+          <div className="bg-[#0a0a0a] rounded-lg p-4 text-center flex flex-col items-center justify-center gap-2">
+            <p className="text-xs text-gray-400">Status</p>
+            <RecruitingStatusDisplay status={athlete.commitStatus} />
           </div>
         </div>
 
