@@ -267,7 +267,7 @@ export default function DashboardPage() {
                           <p className="text-white font-bold text-lg">{best}</p>
                         </div>
                         <div>
-                          <p className="text-gray-500 text-xs">Attempts</p>
+                          <p className="text-gray-500 text-xs">Meets</p>
                           <p className="text-white font-bold text-lg">
                             {scores.length}
                           </p>
