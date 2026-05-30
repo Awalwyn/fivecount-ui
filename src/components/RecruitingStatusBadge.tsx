@@ -14,8 +14,8 @@ const STATUS_CONFIG: Record<StatusVariant, StatusConfig> = {
     label: 'Signed',
     emoji: '✅',
   },
-  OPEN: {
-    label: 'Open',
+  OPEN_TO_RECRUITING: {
+    label: 'Open to Recruiting',
     emoji: '🟢',
   },
   VERBALLY_COMMITTED: {

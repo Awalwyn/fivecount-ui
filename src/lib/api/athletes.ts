@@ -1,7 +1,7 @@
 import { apiCall } from './client';
 import { EventType } from './competitions';
 
-export type CommitStatus = 'OPEN' | 'VERBALLY_COMMITTED' | 'SIGNED' | 'NOT_RECRUITING';
+export type CommitStatus = 'OPEN_TO_RECRUITING' | 'VERBALLY_COMMITTED' | 'SIGNED' | 'NOT_RECRUITING';
 
 export interface AthleteProfile {
   id: string;

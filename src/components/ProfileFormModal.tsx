@@ -24,7 +24,7 @@ const profileSchema = z.object({
     'Must be a valid URL or empty'
   ),
   instagramHandle: z.string().max(30, 'Max 30 characters'),
-  commitStatus: z.enum(['OPEN', 'VERBALLY_COMMITTED', 'SIGNED', 'NOT_RECRUITING']).optional(),
+  commitStatus: z.enum(['OPEN_TO_RECRUITING', 'VERBALLY_COMMITTED', 'SIGNED', 'NOT_RECRUITING']).optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -226,7 +226,7 @@ export function ProfileFormModal({
             <label className="input-label">Recruiting Status</label>
             <select {...register('commitStatus')} className="input-field" disabled={isSubmitting}>
               <option value="">Not set</option>
-              <option value="OPEN">Open to Recruiting</option>
+              <option value="OPEN_TO_RECRUITING">Open to Recruiting</option>
               <option value="VERBALLY_COMMITTED">Verbally Committed</option>
               <option value="SIGNED">Signed</option>
               <option value="NOT_RECRUITING">Not Recruiting</option>
