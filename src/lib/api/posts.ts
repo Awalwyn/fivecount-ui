@@ -44,9 +44,11 @@ export async function deletePost(postId: string): Promise<void> {
 }
 
 export async function getMyPosts(userId: string): Promise<Post[]> {
-  return apiCall<Post[]>(`/users/${userId}/posts`, {
+  const data = await apiCall<any>(`/users/${userId}/posts`, {
     method: 'GET',
   });
+  // Backend returns paginated response, extract content array
+  return data.content || [];
 }
 
 // Public endpoints
@@ -61,13 +63,17 @@ export async function getAthletePosts(athleteId: string): Promise<Post[]> {
   if (!response.ok) {
     throw new Error(`Failed to fetch athlete posts: ${response.statusText}`);
   }
-  return response.json();
+  const data = await response.json();
+  // Backend returns paginated response, extract content array
+  return data.content || [];
 }
 
 export async function getFeedPosts(): Promise<Post[]> {
-  const response = await fetch(`${API_BASE_URL}/posts`);
+  const response = await fetch(`${API_BASE_URL}/api/feed`);
   if (!response.ok) {
     throw new Error(`Failed to fetch feed: ${response.statusText}`);
   }
-  return response.json();
+  const data = await response.json();
+  // Backend returns paginated response, extract content array
+  return data.content || [];
 }
