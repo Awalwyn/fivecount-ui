@@ -60,7 +60,7 @@ export default function ProfilePage() {
 
         // Load posts (don't fail if this errors)
         try {
-          const postsData = await getMyPosts();
+          const postsData = await getMyPosts(user.id);
           setPosts(postsData);
         } catch (err) {
           console.error('Failed to load posts', err);

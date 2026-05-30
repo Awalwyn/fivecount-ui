@@ -43,8 +43,8 @@ export async function deletePost(postId: string): Promise<void> {
   });
 }
 
-export async function getMyPosts(): Promise<Post[]> {
-  return apiCall<Post[]>('/posts/my', {
+export async function getMyPosts(userId: string): Promise<Post[]> {
+  return apiCall<Post[]>(`/users/${userId}/posts`, {
     method: 'GET',
   });
 }
@@ -57,7 +57,7 @@ if (!API_BASE_URL) {
 }
 
 export async function getAthletePosts(athleteId: string): Promise<Post[]> {
-  const response = await fetch(`${API_BASE_URL}/posts/athlete/${athleteId}`);
+  const response = await fetch(`${API_BASE_URL}/api/users/${athleteId}/posts`);
   if (!response.ok) {
     throw new Error(`Failed to fetch athlete posts: ${response.statusText}`);
   }
