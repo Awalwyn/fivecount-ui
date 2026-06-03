@@ -1,9 +1,22 @@
-import { createClient } from '@/lib/supabase/client';
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
+// Check if running in demo mode (no Supabase configured)
+export function isDemoMode(): boolean {
+  return !isSupabaseConfigured();
+}
+
 async function getAuthToken(): Promise<string> {
+  if (isDemoMode()) {
+    return 'demo-token';
+  }
+
   const supabase = createClient();
+  if (!supabase) {
+    throw new Error('Supabase not configured');
+  }
+
   const {
     data: { session },
     error,
@@ -20,8 +33,17 @@ export async function apiCall<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
+  if (isDemoMode()) {
+    console.log('[Demo Mode] API call to:', endpoint);
+    return null as T;
+  }
+
   try {
     const supabase = createClient();
+    if (!supabase) {
+      throw new Error('Supabase not configured');
+    }
+
     const token = await getAuthToken();
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
