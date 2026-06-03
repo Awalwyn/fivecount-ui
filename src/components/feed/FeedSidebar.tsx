@@ -15,12 +15,12 @@ const SUGGESTED_ATHLETES = [
   { id: '3', name: 'Tyler Brooks', level: 'Elite', school: 'Michigan', avatar: null },
 ];
 
-const TOP_SCORES_WEEK = [
-  { id: '1', athlete: 'Marcus Chen', event: 'Floor', score: 14.650, change: '+0.2' },
-  { id: '2', athlete: 'Jake Williams', event: 'Vault', score: 14.500, change: '+0.15' },
-  { id: '3', athlete: 'Tyler Brooks', event: 'High Bar', score: 14.350, change: '+0.3' },
-  { id: '4', athlete: 'Ryan Martinez', event: 'P. Bars', score: 14.200, change: 'new' },
-  { id: '5', athlete: 'Chris Johnson', event: 'Rings', score: 14.100, change: '+0.1' },
+const TOP_AA_SCORES_WEEK = [
+  { id: '1', athlete: 'Marcus Chen', school: 'Stanford', score: 86.450, change: '+1.2' },
+  { id: '2', athlete: 'Jake Williams', school: 'Oklahoma', score: 85.900, change: '+0.8' },
+  { id: '3', athlete: 'Tyler Brooks', school: 'Michigan', score: 85.650, change: '+0.5' },
+  { id: '4', athlete: 'Ryan Martinez', school: 'Penn State', score: 85.200, change: 'new' },
+  { id: '5', athlete: 'Chris Johnson', school: 'Ohio State', score: 84.850, change: '+0.3' },
 ];
 
 export function FeedSidebar() {
@@ -33,7 +33,7 @@ export function FeedSidebar() {
   };
 
   return (
-    <aside className="w-80 flex-shrink-0 space-y-6">
+    <aside className="w-80 flex-shrink-0 space-y-4">
       {/* Trending Meets */}
       <div className="bg-[#111111] border border-[#1f1f1f] rounded-xl p-4">
         <div className="flex items-center gap-2 mb-4">
