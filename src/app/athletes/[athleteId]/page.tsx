@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getPublicAthleteProfile, AthleteProfile } from '@/lib/api/athletes';
 import { getCompetitionResults, CompetitionResult } from '@/lib/api/competitions';
-import { getAthletePosts, Post } from '@/lib/api/posts';
+import type { Post } from '@/lib/api/posts';
 import { PostFeed } from '@/components/PostFeed';
 import { RecruitingStatusDisplay } from '@/components/RecruitingStatusBadge';
 
@@ -25,9 +25,12 @@ export default function AthleteProfilePage() {
         setLoading(true);
         setError(null);
 
-        // Load athlete profile
+        // Load athlete profile (includes posts)
         const profileData = await getPublicAthleteProfile(athleteId);
         setAthlete(profileData);
+
+        // Use posts from profile response if available
+        setPosts(profileData.posts || []);
 
         // Load competition results
         try {
@@ -36,15 +39,6 @@ export default function AthleteProfilePage() {
         } catch (err) {
           console.error('Failed to load results', err);
           setResults([]);
-        }
-
-        // Load posts
-        try {
-          const postsData = await getAthletePosts(athleteId);
-          setPosts(postsData);
-        } catch (err) {
-          console.error('Failed to load posts', err);
-          setPosts([]);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load profile');

@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { getAthleteByUserId, AthleteProfile } from '@/lib/api/athletes';
 import { getCompetitionResults, CompetitionResult, EventType } from '@/lib/api/competitions';
-import { getMyPosts, Post, deletePost } from '@/lib/api/posts';
+import { deletePost, type Post } from '@/lib/api/posts';
 import { ProfileFormModal } from '@/components/ProfileFormModal';
 import { PostComposerModal } from '@/components/PostComposerModal';
 import { PostFeed } from '@/components/PostFeed';
@@ -44,10 +44,13 @@ export default function ProfilePage() {
         setLoading(true);
         setError(null);
 
-        // Load profile
+        // Load profile (includes posts)
         const profileData = await getAthleteByUserId(user.id);
         setAthlete(profileData);
         setError(null);
+
+        // Use posts from profile response if available
+        setPosts(profileData.posts || []);
 
         // Load competition results (don't fail if this errors)
         try {
@@ -56,15 +59,6 @@ export default function ProfilePage() {
         } catch (err) {
           console.error('Failed to load competition results', err);
           setResults([]);
-        }
-
-        // Load posts (don't fail if this errors)
-        try {
-          const postsData = await getMyPosts(user.id);
-          setPosts(postsData);
-        } catch (err) {
-          console.error('Failed to load posts', err);
-          setPosts([]);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load profile');

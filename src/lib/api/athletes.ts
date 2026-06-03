@@ -1,5 +1,6 @@
 import { apiCall } from './client';
 import { EventType } from './competitions';
+import type { Post } from './posts';
 
 export type CommitStatus = 'OPEN_TO_RECRUITING' | 'VERBALLY_COMMITTED' | 'SIGNED' | 'NOT_RECRUITING';
 
@@ -17,6 +18,7 @@ export interface AthleteProfile {
   instagramHandle?: string;
   commitStatus?: CommitStatus;
   eventStats?: Record<string, any>; // Stats from API
+  posts?: Post[]; // Posts included in profile response
   createdAt: string;
   updatedAt: string;
 }
