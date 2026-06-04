@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getPublicAthleteProfile, AthleteProfile } from '@/lib/api/athletes';
-import { getCompetitionResults, CompetitionResult } from '@/lib/api/competitions';
+import { getCompetitionResults, CompetitionResult, type EventType } from '@/lib/api/competitions';
 import type { Post } from '@/lib/api/posts';
 import { PostFeed } from '@/components/PostFeed';
 import { RecruitingStatusDisplay } from '@/components/RecruitingStatusBadge';
+import { ScoreProgressionChart } from '@/components/dashboard/ScoreProgressionChart';
 
 export default function AthleteProfilePage() {
   const params = useParams();
@@ -18,6 +19,7 @@ export default function AthleteProfilePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeEvent, setActiveEvent] = useState<EventType>('ALL_AROUND');
 
   useEffect(() => {
     const loadData = async () => {
@@ -162,6 +164,18 @@ export default function AthleteProfilePage() {
           <button className="btn-primary px-6">Sign Up as Coach</button>
         </div>
       </div>
+
+      {/* Score Progression Chart */}
+      {results.length > 0 && (
+        <div>
+          <h2 className="text-body-bold text-2xl mb-4 text-white">Score Progression</h2>
+          <ScoreProgressionChart
+            results={results}
+            activeEvent={activeEvent}
+            onEventChange={setActiveEvent}
+          />
+        </div>
+      )}
 
       {/* Posts Feed */}
       <div>
