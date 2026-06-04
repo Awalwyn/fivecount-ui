@@ -19,7 +19,7 @@ export function DashboardSidebar() {
     { href: '/dashboard/profile', label: 'Profile', show: true },
     { href: '/dashboard/competitions', label: 'Results', show: true },
     { href: '/dashboard/feed', label: 'Feed', show: true },
-    { href: '/athletes', label: 'Athletes', show: FEATURES.SEARCH },
+    { href: '/dashboard/athletes', label: 'Athletes', show: FEATURES.SEARCH },
   ];
 
   return (
