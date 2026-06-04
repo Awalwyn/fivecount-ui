@@ -1,17 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { getPublicAthleteProfile, AthleteProfile } from '@/lib/api/athletes';
 import { getCompetitionResults, CompetitionResult, type EventType } from '@/lib/api/competitions';
 import type { Post } from '@/lib/api/posts';
 import { PostFeed } from '@/components/PostFeed';
-import { RecruitingStatusDisplay } from '@/components/RecruitingStatusBadge';
 import { ScoreProgressionChart } from '@/components/dashboard/ScoreProgressionChart';
+import { RecentMeetsSection } from '@/components/dashboard/RecentMeetsSection';
+import { AwardsSection } from '@/components/dashboard/AwardsSection';
+import { PersonalBestsSection } from '@/components/dashboard/PersonalBestsSection';
 
 export default function AthleteProfilePage() {
   const params = useParams();
-  const router = useRouter();
   const athleteId = params.athleteId as string;
 
   const [athlete, setAthlete] = useState<AthleteProfile | null>(null);
@@ -63,19 +64,10 @@ export default function AthleteProfilePage() {
 
   if (!athlete || error) {
     return (
-      <div className="space-y-6 max-w-4xl mx-auto">
-        <div>
-          <h1 className="heading-display text-4xl text-white mb-2">Athlete Profile</h1>
-          <p className="text-gray-400">Athlete not found</p>
-        </div>
-        <div className="bg-[#111111] border border-[#1f1f1f] rounded-lg p-8">
-          <p className="text-gray-400 mb-4">We couldn't find this athlete profile.</p>
-          <button
-            onClick={() => router.push('/athletes')}
-            className="btn-primary"
-          >
-            Back to Athletes
-          </button>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="heading-display text-4xl text-white mb-2">Athlete not found</h1>
+          <p className="text-gray-400">This profile doesn't exist or has been deleted.</p>
         </div>
       </div>
     );
@@ -92,95 +84,139 @@ export default function AthleteProfilePage() {
     .filter(r => r.eventType !== 'ALL_AROUND')
     .reduce((max, r) => Math.max(max, r.score), 0);
 
+  const scoresCount = new Set(results.map(r => `${r.meetName}|${r.meetDate}`)).size;
+
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
-      {/* Profile Card */}
+    <div className="space-y-8">
+      {/* Profile Header Card */}
       <div className="bg-[#111111] border border-[#1f1f1f] rounded-xl p-8">
-        {/* Header */}
-        <div className="flex gap-6 items-start mb-8">
-          {/* Avatar */}
-          <div className="flex-shrink-0">
+        {/* Header Section */}
+        <div className="flex gap-8 items-start mb-8">
+          {/* Avatar + Info */}
+          <div className="flex gap-4 flex-1 items-start">
+            {/* Avatar */}
             {athlete.profilePictureUrl ? (
               <img
                 src={athlete.profilePictureUrl}
                 alt={athlete.firstName}
-                className="w-28 h-28 rounded-xl object-cover"
+                className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
               />
             ) : (
-              <div className="w-28 h-28 rounded-xl bg-[#1f1f1f] text-[#5EFF6E] heading-display text-3xl flex items-center justify-center">
+              <div className="w-20 h-20 rounded-lg bg-[#1f1f1f] text-[#5EFF6E] heading-display text-2xl flex items-center justify-center flex-shrink-0">
                 {initials}
               </div>
             )}
+
+            {/* Name + Meta Info */}
+            <div className="flex-1 min-w-0">
+              <h1 className="heading-display text-3xl text-white mb-1">
+                {athlete.firstName} {athlete.lastName}
+              </h1>
+              <div className="flex items-center gap-2 mb-2 flex-wrap text-sm text-gray-400">
+                <span>📍 {athlete.city}, {athlete.state}</span>
+                <span>•</span>
+                <span>Class of {athlete.gradYear}</span>
+                {athlete.instagramHandle && (
+                  <>
+                    <span>•</span>
+                    <a
+                      href={`https://instagram.com/${athlete.instagramHandle}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#5EFF6E] hover:underline"
+                    >
+                      @{athlete.instagramHandle}
+                    </a>
+                  </>
+                )}
+              </div>
+              {athlete.clubName && (
+                <p className="text-gray-400 text-xs mb-3">{athlete.clubName}</p>
+              )}
+              {athlete.bio && <p className="text-gray-300 text-sm max-w-lg">{athlete.bio}</p>}
+            </div>
           </div>
 
-          {/* Info */}
-          <div className="flex-1">
-            <h1 className="heading-display text-4xl text-white mb-2">
-              {athlete.firstName} {athlete.lastName}
-            </h1>
-            <div className="flex items-center gap-2 mb-3">
-              {athlete.instagramHandle && (
-                <a
-                  href={`https://instagram.com/${athlete.instagramHandle}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[#5EFF6E] hover:underline text-sm"
-                >
-                  Instagram
-                </a>
-              )}
+          {/* Recruiting Status Badge */}
+          <div className="flex flex-col items-center gap-2 flex-shrink-0">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[#5EFF6E]">
+              <span className="text-xl">✓</span>
             </div>
-            <p className="text-gray-400 text-sm mb-4">
-              {athlete.clubName} · {athlete.city}, {athlete.state} · Class of {athlete.gradYear}
+            <p className="text-gray-400 text-xs text-center">
+              {athlete.commitStatus === 'OPEN_TO_RECRUITING' ? 'Open to Recruiting' :
+               athlete.commitStatus === 'VERBALLY_COMMITTED' ? 'Verbally Committed' :
+               athlete.commitStatus === 'SIGNED' ? 'Signed' : 'Not Recruiting'}
             </p>
-            {athlete.bio && <p className="text-gray-300 text-sm max-w-lg">{athlete.bio}</p>}
           </div>
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-3 gap-4 mb-8 pb-8 border-b border-[#1f1f1f]">
-          {/* AA Peak */}
-          <div className="bg-[#0a0a0a] rounded-lg p-4 text-center">
-            <p className="text-gray-400 text-xs mb-2">All Around Peak</p>
-            <p className="text-[#5EFF6E] text-3xl font-bold">{aaPeak > 0 ? aaPeak.toFixed(2) : '—'}</p>
+        <div className="flex gap-6 mb-6 pb-6 border-b border-[#1f1f1f] overflow-x-auto">
+          <div className="flex flex-col items-center gap-1 flex-shrink-0">
+            <p className="text-[#5EFF6E] text-2xl font-bold">{aaPeak > 0 ? aaPeak.toFixed(1) : '—'}</p>
+            <p className="text-gray-400 text-xs whitespace-nowrap">AA Peak</p>
           </div>
-
-          {/* Best Event */}
-          <div className="bg-[#0a0a0a] rounded-lg p-4 text-center">
-            <p className="text-gray-400 text-xs mb-2">Best Event Score</p>
-            <p className="text-[#5EFF6E] text-3xl font-bold">{bestScore > 0 ? bestScore.toFixed(2) : '—'}</p>
+          <div className="flex flex-col items-center gap-1 flex-shrink-0">
+            <p className="text-[#5EFF6E] text-2xl font-bold">{bestScore > 0 ? bestScore.toFixed(1) : '—'}</p>
+            <p className="text-gray-400 text-xs whitespace-nowrap">Best Event</p>
           </div>
-
-          {/* Commit Status */}
-          <div className="bg-[#0a0a0a] rounded-lg p-4 text-center flex flex-col items-center justify-center gap-2">
-            <p className="text-xs text-gray-400">Status</p>
-            <RecruitingStatusDisplay status={athlete.commitStatus} />
+          <div className="flex flex-col items-center gap-1 flex-shrink-0">
+            <p className="text-[#5EFF6E] text-2xl font-bold">{scoresCount}</p>
+            <p className="text-gray-400 text-xs whitespace-nowrap">Scores</p>
+          </div>
+          <div className="flex flex-col items-center gap-1 flex-shrink-0">
+            <p className="text-[#5EFF6E] text-2xl font-bold">{posts.length}</p>
+            <p className="text-gray-400 text-xs whitespace-nowrap">Posts</p>
           </div>
         </div>
 
-        {/* Sign up CTA */}
+        {/* Coach CTA */}
         <div className="text-center">
-          <p className="text-gray-400 text-sm mb-3">Are you a coach? Reach out to this athlete.</p>
+          <p className="text-gray-400 text-sm mb-3">Interested in this athlete?</p>
           <button className="btn-primary px-6">Sign Up as Coach</button>
         </div>
       </div>
 
-      {/* Score Progression Chart */}
-      {results.length > 0 && (
-        <div>
-          <h2 className="text-body-bold text-2xl mb-4 text-white">Score Progression</h2>
-          <ScoreProgressionChart
-            results={results}
-            activeEvent={activeEvent}
-            onEventChange={setActiveEvent}
-          />
-        </div>
-      )}
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-3 gap-8">
+        {/* Left Column: Score Progression + Posts */}
+        <div className="col-span-2 space-y-8">
+          {/* Score Progression */}
+          {results.length > 0 && (
+            <div>
+              <h2 className="text-body-bold text-xl mb-4 text-white">Score Progression</h2>
+              <ScoreProgressionChart
+                results={results}
+                activeEvent={activeEvent}
+                onEventChange={setActiveEvent}
+              />
+            </div>
+          )}
 
-      {/* Posts Feed */}
-      <div>
-        <h2 className="text-body-bold text-2xl mb-4 text-white">Posts</h2>
-        <PostFeed posts={posts} athleteResults={results} emptyMessage="No posts yet" />
+          {/* Posts */}
+          <div>
+            <h2 className="text-body-bold text-xl mb-4 text-white">Posts</h2>
+            <PostFeed posts={posts} athleteResults={results} emptyMessage="No posts yet" />
+          </div>
+        </div>
+
+        {/* Right Sidebar */}
+        <div className="space-y-8">
+          {/* Recent Meets */}
+          <div className="bg-[#111111] border border-[#1f1f1f] rounded-lg p-4">
+            <RecentMeetsSection results={results} />
+          </div>
+
+          {/* Awards & Achievements */}
+          <div className="bg-[#111111] border border-[#1f1f1f] rounded-lg p-4">
+            <AwardsSection />
+          </div>
+
+          {/* Personal Bests */}
+          <div className="bg-[#111111] border border-[#1f1f1f] rounded-lg p-4">
+            <PersonalBestsSection results={results} />
+          </div>
+        </div>
       </div>
     </div>
   );
