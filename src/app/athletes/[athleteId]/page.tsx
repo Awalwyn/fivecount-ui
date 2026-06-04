@@ -139,10 +139,10 @@ export default function AthleteProfilePage() {
 
           {/* Recruiting Status Badge */}
           <div className="flex flex-col items-center gap-2 flex-shrink-0">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[#5EFF6E]">
-              <span className="text-xl">✓</span>
+            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-[#5EFF6E] to-[#4de658] shadow-lg shadow-[#5EFF6E]/50">
+              <span className="text-2xl font-bold">✓</span>
             </div>
-            <p className="text-gray-400 text-xs text-center">
+            <p className="text-gray-400 text-xs text-center font-medium">
               {athlete.commitStatus === 'OPEN_TO_RECRUITING' ? 'Open to Recruiting' :
                athlete.commitStatus === 'VERBALLY_COMMITTED' ? 'Verbally Committed' :
                athlete.commitStatus === 'SIGNED' ? 'Signed' : 'Not Recruiting'}
@@ -151,22 +151,22 @@ export default function AthleteProfilePage() {
         </div>
 
         {/* Stats Row */}
-        <div className="flex gap-6 mb-6 pb-6 border-b border-[#1f1f1f] overflow-x-auto">
-          <div className="flex flex-col items-center gap-1 flex-shrink-0">
-            <p className="text-[#5EFF6E] text-2xl font-bold">{aaPeak > 0 ? aaPeak.toFixed(1) : '—'}</p>
-            <p className="text-gray-400 text-xs whitespace-nowrap">AA Peak</p>
+        <div className="flex justify-around items-center mb-6 pb-6 border-b border-[#1f1f1f]">
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-[#5EFF6E] text-3xl font-bold">{aaPeak > 0 ? aaPeak.toFixed(1) : '—'}</p>
+            <p className="text-gray-500 text-xs">AA Peak</p>
           </div>
-          <div className="flex flex-col items-center gap-1 flex-shrink-0">
-            <p className="text-[#5EFF6E] text-2xl font-bold">{bestScore > 0 ? bestScore.toFixed(1) : '—'}</p>
-            <p className="text-gray-400 text-xs whitespace-nowrap">Best Event</p>
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-[#5EFF6E] text-3xl font-bold">{bestScore > 0 ? bestScore.toFixed(1) : '—'}</p>
+            <p className="text-gray-500 text-xs">Best Event</p>
           </div>
-          <div className="flex flex-col items-center gap-1 flex-shrink-0">
-            <p className="text-[#5EFF6E] text-2xl font-bold">{scoresCount}</p>
-            <p className="text-gray-400 text-xs whitespace-nowrap">Scores</p>
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-[#5EFF6E] text-3xl font-bold">{scoresCount}</p>
+            <p className="text-gray-500 text-xs">Scores</p>
           </div>
-          <div className="flex flex-col items-center gap-1 flex-shrink-0">
-            <p className="text-[#5EFF6E] text-2xl font-bold">{posts.length}</p>
-            <p className="text-gray-400 text-xs whitespace-nowrap">Posts</p>
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-[#5EFF6E] text-3xl font-bold">{posts.length}</p>
+            <p className="text-gray-500 text-xs">Posts</p>
           </div>
         </div>
 
