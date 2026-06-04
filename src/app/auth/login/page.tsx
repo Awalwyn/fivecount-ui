@@ -20,6 +20,11 @@ export default function LoginPage() {
       setError(null);
 
       const supabase = createClient();
+      if (!supabase) {
+        setError('Failed to initialize authentication');
+        return;
+      }
+
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
