@@ -53,12 +53,15 @@ const MOCK_ATHLETE_PROFILE: AthleteProfile = {
 const MOCK_SEARCH_RESULTS: AthleteSearchResult[] = [
   {
     id: 'athlete-1',
-    firstName: 'Sarah',
+    firstName: 'Marcus',
     lastName: 'Chen',
     gradYear: 2025,
     clubName: 'Golden State Gymnastics',
     city: 'San Francisco',
     state: 'CA',
+    profilePictureUrl: undefined,
+    commitStatus: 'OPEN_TO_RECRUITING',
+    allAroundAvg: 85.450,
     topEvents: [
       { event: 'VAULT', averageScore: 14.550 },
       { event: 'FLOOR', averageScore: 14.300 },
@@ -66,12 +69,15 @@ const MOCK_SEARCH_RESULTS: AthleteSearchResult[] = [
   },
   {
     id: 'athlete-2',
-    firstName: 'Marcus',
+    firstName: 'Jake',
     lastName: 'Williams',
     gradYear: 2026,
     clubName: 'Texas Elite',
     city: 'Houston',
     state: 'TX',
+    profilePictureUrl: undefined,
+    commitStatus: 'VERBALLY_COMMITTED',
+    allAroundAvg: 84.900,
     topEvents: [
       { event: 'RINGS', averageScore: 14.700 },
       { event: 'PARALLEL_BARS', averageScore: 14.450 },
@@ -79,12 +85,15 @@ const MOCK_SEARCH_RESULTS: AthleteSearchResult[] = [
   },
   {
     id: 'athlete-3',
-    firstName: 'Emma',
+    firstName: 'Ryan',
     lastName: 'Rodriguez',
     gradYear: 2025,
     clubName: 'Florida Stars',
     city: 'Orlando',
     state: 'FL',
+    profilePictureUrl: undefined,
+    commitStatus: 'OPEN_TO_RECRUITING',
+    allAroundAvg: 84.500,
     topEvents: [
       { event: 'ALL_AROUND', averageScore: 84.500 },
       { event: 'VAULT', averageScore: 14.350 },
@@ -98,6 +107,9 @@ const MOCK_SEARCH_RESULTS: AthleteSearchResult[] = [
     clubName: 'Rocky Mountain Gymnastics',
     city: 'Denver',
     state: 'CO',
+    profilePictureUrl: undefined,
+    commitStatus: 'NOT_RECRUITING',
+    allAroundAvg: 82.100,
     topEvents: [
       { event: 'HIGH_BAR', averageScore: 14.100 },
       { event: 'POMMEL_HORSE', averageScore: 13.900 },
@@ -111,9 +123,60 @@ const MOCK_SEARCH_RESULTS: AthleteSearchResult[] = [
     clubName: 'Arizona Heat',
     city: 'Phoenix',
     state: 'AZ',
+    profilePictureUrl: undefined,
+    commitStatus: 'OPEN_TO_RECRUITING',
+    allAroundAvg: 84.200,
     topEvents: [
       { event: 'FLOOR', averageScore: 14.450 },
       { event: 'VAULT', averageScore: 14.200 },
+    ],
+  },
+  {
+    id: 'athlete-6',
+    firstName: 'Chris',
+    lastName: 'Johnson',
+    gradYear: 2025,
+    clubName: 'Midwest Elite',
+    city: 'Chicago',
+    state: 'IL',
+    profilePictureUrl: undefined,
+    commitStatus: 'SIGNED',
+    allAroundAvg: 86.100,
+    topEvents: [
+      { event: 'POMMEL_HORSE', averageScore: 14.650 },
+      { event: 'RINGS', averageScore: 14.500 },
+    ],
+  },
+  {
+    id: 'athlete-7',
+    firstName: 'Brandon',
+    lastName: 'Lee',
+    gradYear: 2026,
+    clubName: 'Pacific Coast Academy',
+    city: 'San Diego',
+    state: 'CA',
+    profilePictureUrl: undefined,
+    commitStatus: 'OPEN_TO_RECRUITING',
+    allAroundAvg: 83.750,
+    topEvents: [
+      { event: 'HIGH_BAR', averageScore: 14.300 },
+      { event: 'FLOOR', averageScore: 14.100 },
+    ],
+  },
+  {
+    id: 'athlete-8',
+    firstName: 'Derek',
+    lastName: 'Thompson',
+    gradYear: 2027,
+    clubName: 'East Coast Gymnastics',
+    city: 'Boston',
+    state: 'MA',
+    profilePictureUrl: undefined,
+    commitStatus: 'OPEN_TO_RECRUITING',
+    allAroundAvg: 81.900,
+    topEvents: [
+      { event: 'VAULT', averageScore: 14.000 },
+      { event: 'PARALLEL_BARS', averageScore: 13.850 },
     ],
   },
 ];
@@ -198,6 +261,9 @@ export interface AthleteSearchResult {
   clubName: string;
   city: string;
   state: string;
+  profilePictureUrl?: string;
+  commitStatus?: CommitStatus;
+  allAroundAvg?: number;
   topEvents: Array<{
     event: EventType;
     averageScore: number;
