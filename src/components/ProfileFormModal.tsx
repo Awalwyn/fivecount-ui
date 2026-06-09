@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { createClient } from '@/lib/supabase/client';
 import {
   createAthleteProfile,
   updateAthleteProfile,
@@ -114,6 +115,20 @@ export function ProfileFormModal({
         result = await updateAthleteProfile(existingProfile.id, cleanData);
       } else {
         result = await createAthleteProfile(cleanData);
+      }
+
+      // Update Supabase user metadata with new name
+      try {
+        const supabase = createClient();
+        await supabase.auth.updateUser({
+          data: {
+            firstName: data.firstName,
+            lastName: data.lastName,
+          },
+        });
+      } catch (supabaseError) {
+        console.error('Failed to update Supabase metadata:', supabaseError);
+        // Don't fail the profile save if metadata update fails
       }
 
       onSuccess(result);
