@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { getPublicAthleteProfile, AthleteProfile } from '@/lib/api/athletes';
 import { getCompetitionResults, CompetitionResult, type EventType } from '@/lib/api/competitions';
 import type { Post } from '@/lib/api/posts';
+import { getAthletesAwards, Award } from '@/lib/api/awards';
 import { PostFeed } from '@/components/PostFeed';
 import { ScoreProgressionChart } from '@/components/dashboard/ScoreProgressionChart';
 import { RecentMeetsSection } from '@/components/dashboard/RecentMeetsSection';
@@ -18,6 +19,7 @@ export default function AthleteProfilePage() {
   const [athlete, setAthlete] = useState<AthleteProfile | null>(null);
   const [results, setResults] = useState<CompetitionResult[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [awards, setAwards] = useState<Award[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeEvent, setActiveEvent] = useState<EventType>('ALL_AROUND');
@@ -38,6 +40,14 @@ export default function AthleteProfilePage() {
         } catch (err) {
           console.error('Failed to load results', err);
           setResults([]);
+        }
+
+        try {
+          const awardsData = await getAthletesAwards(profileData.id);
+          setAwards(awardsData);
+        } catch (err) {
+          console.error('Failed to load awards', err);
+          setAwards([]);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load profile');
@@ -186,7 +196,7 @@ export default function AthleteProfilePage() {
 
           {/* Awards */}
           <div className="bg-[#111111] border border-[#1f1f1f] rounded-xl p-4">
-            <AwardsSection />
+            <AwardsSection awards={awards} />
           </div>
 
           {/* Personal Bests */}

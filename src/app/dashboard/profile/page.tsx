@@ -5,8 +5,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { getAthleteByUserId, AthleteProfile } from '@/lib/api/athletes';
 import { getCompetitionResults, CompetitionResult, EventType } from '@/lib/api/competitions';
 import { deletePost, type Post } from '@/lib/api/posts';
+import { getAthletesAwards, Award, deleteAward } from '@/lib/api/awards';
 import { ProfileFormModal } from '@/components/ProfileFormModal';
 import { PostComposerModal } from '@/components/PostComposerModal';
+import { AwardModal } from '@/components/AwardModal';
 import { PostFeed } from '@/components/PostFeed';
 import { ScoreProgressionChart } from '@/components/dashboard/ScoreProgressionChart';
 import { RecentMeetsSection } from '@/components/dashboard/RecentMeetsSection';
@@ -18,10 +20,13 @@ export default function ProfilePage() {
   const [athlete, setAthlete] = useState<AthleteProfile | null>(null);
   const [results, setResults] = useState<CompetitionResult[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [awards, setAwards] = useState<Award[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPostComposerOpen, setIsPostComposerOpen] = useState(false);
+  const [isAwardModalOpen, setIsAwardModalOpen] = useState(false);
+  const [selectedAward, setSelectedAward] = useState<Award | null>(null);
   const [activeEvent, setActiveEvent] = useState<EventType>('ALL_AROUND');
 
   useEffect(() => {
@@ -43,11 +48,20 @@ export default function ProfilePage() {
           console.error('Failed to load competition results', err);
           setResults([]);
         }
+
+        try {
+          const awardsData = await getAthletesAwards(profileData.id);
+          setAwards(awardsData);
+        } catch (err) {
+          console.error('Failed to load awards', err);
+          setAwards([]);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load profile');
         setAthlete(null);
         setResults([]);
         setPosts([]);
+        setAwards([]);
       } finally {
         setLoading(false);
       }
@@ -249,7 +263,14 @@ export default function ProfilePage() {
 
           {/* Awards */}
           <div className="bg-[#111111] border border-[#1f1f1f] rounded-xl p-4">
-            <AwardsSection isEditable={true} />
+            <AwardsSection
+              awards={awards}
+              isEditable={true}
+              onAddAward={() => {
+                setSelectedAward(null);
+                setIsAwardModalOpen(true);
+              }}
+            />
           </div>
 
           {/* Personal Bests */}
@@ -279,6 +300,27 @@ export default function ProfilePage() {
         }}
         athleteResults={results}
       />
+
+      {athlete && (
+        <AwardModal
+          isOpen={isAwardModalOpen}
+          athleteId={athlete.id}
+          award={selectedAward}
+          onClose={() => {
+            setIsAwardModalOpen(false);
+            setSelectedAward(null);
+          }}
+          onSuccess={(award) => {
+            if (selectedAward?.id) {
+              setAwards(prev => prev.map(a => a.id === award.id ? award : a));
+            } else {
+              setAwards(prev => [award, ...prev]);
+            }
+            setIsAwardModalOpen(false);
+            setSelectedAward(null);
+          }}
+        />
+      )}
     </div>
   );
 }
