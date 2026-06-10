@@ -197,7 +197,7 @@ export default function ProfilePage() {
           </div>
           <div className="text-center">
             <p className="text-white text-2xl font-bold">{bestScore > 0 ? bestScore.toFixed(1) : '—'}</p>
-            <p className="text-xs text-gray-500">Best Event</p>
+            <p className="text-xs text-gray-500">GPA</p>
           </div>
           <div className="text-center">
             <p className="text-white text-2xl font-bold">{scoresCount}</p>
