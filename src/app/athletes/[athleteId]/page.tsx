@@ -140,7 +140,7 @@ export default function AthleteProfilePage() {
             <p className="text-xs text-gray-500">AA Peak</p>
           </div>
           <div className="text-center">
-            <p className="text-white text-2xl font-bold">{bestScore > 0 ? bestScore.toFixed(1) : '—'}</p>
+            <p className="text-white text-2xl font-bold">{(athlete as any).gpa ? (athlete as any).gpa.toFixed(2) : '—'}</p>
             <p className="text-xs text-gray-500">GPA</p>
           </div>
           <div className="text-center">

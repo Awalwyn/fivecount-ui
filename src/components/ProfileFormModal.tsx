@@ -25,6 +25,7 @@ const profileSchema = z.object({
     'Must be a valid URL or empty'
   ),
   instagramHandle: z.string().max(30, 'Max 30 characters'),
+  gpa: z.coerce.number().optional().refine((val) => !val || (val >= 0 && val <= 4.0), 'GPA must be between 0.0 and 4.0'),
   commitStatus: z.enum(['OPEN_TO_RECRUITING', 'VERBALLY_COMMITTED', 'SIGNED', 'NOT_RECRUITING']).optional(),
 });
 
@@ -61,6 +62,7 @@ export function ProfileFormModal({
       bio: '',
       profilePictureUrl: '',
       instagramHandle: '',
+      gpa: undefined,
       commitStatus: undefined,
     },
   });
@@ -80,6 +82,7 @@ export function ProfileFormModal({
         bio: existingProfile.bio || '',
         profilePictureUrl: existingProfile.profilePictureUrl || '',
         instagramHandle: existingProfile.instagramHandle || '',
+        gpa: (existingProfile as any).gpa || undefined,
         commitStatus: existingProfile.commitStatus as any,
       });
     } else {
@@ -93,6 +96,7 @@ export function ProfileFormModal({
         bio: '',
         profilePictureUrl: '',
         instagramHandle: '',
+        gpa: undefined,
         commitStatus: undefined,
       });
     }
@@ -234,6 +238,13 @@ export function ProfileFormModal({
               <input {...register('instagramHandle')} type="text" className="input-field rounded-l-none" placeholder="yourhandle (optional)" disabled={isSubmitting} />
             </div>
             {errors.instagramHandle && <p className="text-red-400 text-sm mt-1">{errors.instagramHandle.message}</p>}
+          </div>
+
+          {/* GPA */}
+          <div>
+            <label className="input-label">GPA</label>
+            <input {...register('gpa')} type="number" step="0.01" min="0" max="4.0" className="input-field" placeholder="3.8 (optional, max 4.0)" disabled={isSubmitting} />
+            {errors.gpa && <p className="text-red-400 text-sm mt-1">{errors.gpa.message}</p>}
           </div>
 
           {/* Commit Status */}
