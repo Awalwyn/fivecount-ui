@@ -126,7 +126,6 @@ export default function ProfilePage() {
 
   const initials = `${athlete.firstName[0]}${athlete.lastName[0]}`.toUpperCase();
   const aaPeak = results.filter(r => r.eventType === 'ALL_AROUND').reduce((max, r) => Math.max(max, r.score), 0);
-  const bestScore = results.filter(r => r.eventType !== 'ALL_AROUND').reduce((max, r) => Math.max(max, r.score), 0);
   const scoresCount = new Set(results.map(r => `${r.meetName}|${r.meetDate}`)).size;
 
   return (
