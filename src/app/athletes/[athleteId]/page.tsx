@@ -6,6 +6,7 @@ import { getPublicAthleteProfile, AthleteProfile } from '@/lib/api/athletes';
 import { getCompetitionResults, CompetitionResult, type EventType } from '@/lib/api/competitions';
 import type { Post } from '@/lib/api/posts';
 import { getAthletesAwards, Award } from '@/lib/api/awards';
+import { formatScore } from '@/lib/utils/formatScore';
 import { PostFeed } from '@/components/PostFeed';
 import { ScoreProgressionChart } from '@/components/dashboard/ScoreProgressionChart';
 import { RecentMeetsSection } from '@/components/dashboard/RecentMeetsSection';
@@ -136,7 +137,7 @@ export default function AthleteProfilePage() {
         {/* Stats Row */}
         <div className="flex justify-between items-center pb-6 border-b border-[#1f1f1f] mb-6">
           <div className="text-center">
-            <p className="text-[#5EFF6E] text-2xl font-bold">{aaPeak > 0 ? aaPeak.toFixed(1) : '—'}</p>
+            <p className="text-[#5EFF6E] text-2xl font-bold">{formatScore(aaPeak > 0 ? aaPeak : undefined)}</p>
             <p className="text-xs text-gray-500">AA Peak</p>
           </div>
           <div className="text-center">

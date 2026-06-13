@@ -6,6 +6,7 @@ import { getAthleteByUserId, AthleteProfile } from '@/lib/api/athletes';
 import { getCompetitionResults, CompetitionResult, EventType } from '@/lib/api/competitions';
 import { deletePost, type Post } from '@/lib/api/posts';
 import { getAthletesAwards, Award, deleteAward } from '@/lib/api/awards';
+import { formatScore } from '@/lib/utils/formatScore';
 import { ProfileFormModal } from '@/components/ProfileFormModal';
 import { PostComposerModal } from '@/components/PostComposerModal';
 import { AwardModal } from '@/components/AwardModal';
@@ -191,7 +192,7 @@ export default function ProfilePage() {
         {/* Stats Row */}
         <div className="flex justify-between items-center pb-6 border-b border-[#1f1f1f]">
           <div className="text-center">
-            <p className="text-[#5EFF6E] text-2xl font-bold">{aaPeak > 0 ? aaPeak.toFixed(1) : '—'}</p>
+            <p className="text-[#5EFF6E] text-2xl font-bold">{formatScore(aaPeak > 0 ? aaPeak : undefined)}</p>
             <p className="text-xs text-gray-500">AA Peak</p>
           </div>
           <div className="text-center">

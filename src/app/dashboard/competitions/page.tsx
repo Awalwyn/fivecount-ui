@@ -16,6 +16,7 @@ import {
   EventType,
 } from '@/lib/api/competitions';
 import { getAthleteByUserId, AthleteProfile } from '@/lib/api/athletes';
+import { formatScore } from '@/lib/utils/formatScore';
 import { PostComposerModal } from '@/components/PostComposerModal';
 
 const EVENT_DISPLAY_NAMES: Record<EventType, string> = {
@@ -379,11 +380,11 @@ export default function CompetitionsPage() {
                 className="bg-[#111111] border border-[#1f1f1f] rounded-lg p-6"
               >
                 <p className="text-gray-400 text-sm mb-2">{EVENT_DISPLAY_NAMES[stat.event]}</p>
-                <p className="text-[#5EFF6E] text-3xl font-bold">{stat.average.toFixed(2)}</p>
+                <p className="text-[#5EFF6E] text-3xl font-bold">{formatScore(stat.average)}</p>
                 <p className="text-gray-500 text-sm mt-2">
                   avg ({stat.count} {stat.count === 1 ? 'meet' : 'meets'})
                 </p>
-                <p className="text-gray-400 text-sm">Best: {stat.best.toFixed(2)}</p>
+                <p className="text-gray-400 text-sm">Best: {formatScore(stat.best)}</p>
               </div>
             ))}
           </div>
@@ -474,7 +475,7 @@ export default function CompetitionsPage() {
                       <div key={eventType} className="text-center">
                         <p className="text-gray-400 text-xs mb-1">{EVENT_DISPLAY_NAMES[eventType]}</p>
                         <p className="text-[#5EFF6E] text-xl font-bold">
-                          {result ? result.score.toFixed(2) : '—'}
+                          {formatScore(result?.score)}
                         </p>
                       </div>
                     );
@@ -485,7 +486,7 @@ export default function CompetitionsPage() {
                 {meet.allAroundScore !== undefined && (
                   <div className="bg-[#0a0a0a] rounded-lg px-4 py-2 mb-2 border border-[#5EFF6E]/20 text-center">
                     <p className="text-gray-400 text-xs mb-0.5">All Around</p>
-                    <p className="text-[#5EFF6E] text-lg font-bold">{meet.allAroundScore.toFixed(2)}</p>
+                    <p className="text-[#5EFF6E] text-lg font-bold">{formatScore(meet.allAroundScore)}</p>
                   </div>
                 )}
 
