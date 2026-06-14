@@ -68,7 +68,7 @@ export function FloatingActionButton({ onSelectOption }: FloatingActionButtonPro
   if (!isMounted) return null;
 
   return createPortal(
-    <div className="fixed bottom-6 right-6 z-40">
+    <div className="fixed bottom-20 right-6 z-40">
       {/* Options Menu */}
       <div
         className={`absolute bottom-16 right-0 flex flex-col-reverse gap-3 transition-all duration-300 ${

@@ -4,6 +4,8 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 
+export type UserRole = 'ATHLETE' | 'COACH';
+
 // Mock user for demo mode
 const MOCK_USER: User = {
   id: 'demo-user-123',
@@ -17,6 +19,8 @@ const MOCK_USER: User = {
   aud: 'authenticated',
   created_at: new Date().toISOString(),
 };
+
+const DEMO_ROLE_STORAGE_KEY = 'fivecount-demo-role';
 
 const MOCK_SESSION: Session = {
   access_token: 'demo-token',
@@ -32,7 +36,10 @@ interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   isDemoMode: boolean;
-  signUp: (email: string, password: string, role: 'ATHLETE' | 'COACH', metadata?: { firstName: string; lastName: string; username: string }) => Promise<void>;
+  role: UserRole;
+  /** Demo-only: switch the previewed role. No-op when Supabase is configured. */
+  setDemoRole: (role: UserRole) => void;
+  signUp: (email: string, password: string, role: UserRole, metadata?: { firstName: string; lastName: string; username: string }) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -43,13 +50,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [demoRole, setDemoRoleState] = useState<UserRole>('ATHLETE');
   const isDemoMode = !isSupabaseConfigured();
+
+  // Demo-only: persist the previewed role across reloads.
+  function setDemoRole(role: UserRole) {
+    if (!isDemoMode) return;
+    setDemoRoleState(role);
+    try {
+      window.localStorage.setItem(DEMO_ROLE_STORAGE_KEY, role);
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  // In demo mode the role comes from the local switch; otherwise from user metadata.
+  const role: UserRole = isDemoMode
+    ? demoRole
+    : ((user?.user_metadata?.role as UserRole) ?? 'ATHLETE');
 
   useEffect(() => {
     // Demo mode - use mock data
     if (isDemoMode) {
       setSession(MOCK_SESSION);
       setUser(MOCK_USER);
+      try {
+        const stored = window.localStorage.getItem(DEMO_ROLE_STORAGE_KEY) as UserRole | null;
+        if (stored === 'ATHLETE' || stored === 'COACH') {
+          setDemoRoleState(stored);
+        }
+      } catch {
+        // ignore storage errors
+      }
       setIsLoading(false);
       return;
     }
@@ -147,7 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, isDemoMode, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, isLoading, isDemoMode, role, setDemoRole, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

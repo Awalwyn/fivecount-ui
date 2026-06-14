@@ -270,6 +270,110 @@ export interface AthleteSearchResult {
   }>;
 }
 
+// ---- Rich per-athlete detail for the public/coach profile page ----
+export interface MeetResultSummary {
+  id: string;
+  name: string;
+  date: string;
+  location: string;
+  scores: Partial<Record<EventType, number>>;
+  allAround: number;
+}
+
+export interface AthleteAward {
+  id: string;
+  title: string;
+  subtitle: string;
+  year: number;
+}
+
+export interface AthleteDetail extends AthleteSearchResult {
+  bio: string;
+  instagramHandle?: string;
+  level: string;
+  heightWeight: string;
+  eventStats: Record<string, { avg: number; high: number; count: number }>;
+  recentMeets: MeetResultSummary[];
+  awards: AthleteAward[];
+}
+
+const EVENT_ORDER: EventType[] = [
+  'FLOOR',
+  'POMMEL_HORSE',
+  'RINGS',
+  'VAULT',
+  'PARALLEL_BARS',
+  'HIGH_BAR',
+];
+
+const MEET_NAMES = [
+  { name: 'Winter Cup', location: 'Frisco, TX' },
+  { name: 'Windy City Invitational', location: 'Chicago, IL' },
+  { name: 'Regional Championships', location: 'Denver, CO' },
+];
+
+/** Deterministically build a full athlete detail from a search result. */
+function buildAthleteDetail(base: AthleteSearchResult): AthleteDetail {
+  const aa = base.allAroundAvg ?? 83;
+  const perEvent = aa / 6;
+
+  const eventStats: Record<string, { avg: number; high: number; count: number }> = {};
+  EVENT_ORDER.forEach((event, i) => {
+    const boost = base.topEvents.find((e) => e.event === event)?.averageScore;
+    const avg = boost ?? Number((perEvent + ((i % 3) - 1) * 0.15).toFixed(3));
+    eventStats[event] = {
+      avg: Number(avg.toFixed(3)),
+      high: Number((avg + 0.25).toFixed(3)),
+      count: 12,
+    };
+  });
+
+  const recentMeets: MeetResultSummary[] = MEET_NAMES.map((meet, idx) => {
+    const variance = (1 - idx) * 0.4; // most recent first, slightly higher
+    const scores: Partial<Record<EventType, number>> = {};
+    let total = 0;
+    EVENT_ORDER.forEach((event) => {
+      const s = Number((eventStats[event].avg + variance / 6).toFixed(3));
+      scores[event] = s;
+      total += s;
+    });
+    return {
+      id: `${base.id}-meet-${idx}`,
+      name: meet.name,
+      date: new Date(Date.now() - (idx * 21 + 5) * 86_400_000).toISOString(),
+      location: meet.location,
+      scores,
+      allAround: Number(total.toFixed(3)),
+    };
+  });
+
+  const awards: AthleteAward[] = [
+    { id: `${base.id}-aw1`, title: 'All-Around Champion', subtitle: `${recentMeets[0].name}`, year: 2024 },
+    { id: `${base.id}-aw2`, title: 'Event Finalist — High Bar', subtitle: 'State Championships', year: 2024 },
+    { id: `${base.id}-aw3`, title: 'Academic All-Conference', subtitle: 'USAG', year: 2023 },
+  ];
+
+  return {
+    ...base,
+    bio: `${base.firstName} is a Level 10 men's gymnast competing for ${base.clubName}. Strongest on ${base.topEvents[0]?.event.replace('_', ' ').toLowerCase()}, with consistent all-around scores in the mid-80s and a focus on NCAA Division I goals.`,
+    instagramHandle: `${base.firstName.toLowerCase()}_${base.lastName.toLowerCase()}`,
+    level: 'Level 10',
+    heightWeight: `5'7" · 145 lbs`,
+    eventStats,
+    recentMeets,
+    awards,
+  };
+}
+
+export async function getAthleteDetail(id: string): Promise<AthleteDetail | null> {
+  if (isDemoMode()) {
+    const base = MOCK_SEARCH_RESULTS.find((a) => a.id === id);
+    if (!base) return null;
+    return buildAthleteDetail(base);
+  }
+  return apiCall<AthleteDetail>(`/athletes/${id}/detail`);
+}
+
 export async function searchAthletes(
   gradYear?: number,
   state?: string,
