@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import { getPublicAthleteProfile, AthleteProfile } from '@/lib/api/athletes';
 import { getCompetitionResults, CompetitionResult, type EventType } from '@/lib/api/competitions';
 import type { Post } from '@/lib/api/posts';
@@ -12,9 +13,12 @@ import { ScoreProgressionChart } from '@/components/dashboard/ScoreProgressionCh
 import { RecentMeetsSection } from '@/components/dashboard/RecentMeetsSection';
 import { AwardsSection } from '@/components/dashboard/AwardsSection';
 import { PersonalBestsSection } from '@/components/dashboard/PersonalBestsSection';
+import { ContactAthleteModal } from '@/components/ContactAthleteModal';
+import Link from 'next/link';
 
 export default function AthleteProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const athleteId = params.athleteId as string;
 
   const [athlete, setAthlete] = useState<AthleteProfile | null>(null);
@@ -24,6 +28,23 @@ export default function AthleteProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeEvent, setActiveEvent] = useState<EventType>('ALL_AROUND');
+  const [session, setSession] = useState<any>(null);
+  const [userRole, setUserRole] = useState<'ATHLETE' | 'COACH' | null>(null);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = createClient();
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      setSession(currentSession);
+
+      if (currentSession?.user?.user_metadata?.role) {
+        setUserRole(currentSession.user.user_metadata.role);
+      }
+    };
+
+    checkAuth();
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -128,9 +149,20 @@ export default function AthleteProfilePage() {
             {athlete.bio && <p className="text-gray-400 text-sm max-w-lg mb-6">{athlete.bio}</p>}
 
             {/* Coach CTA */}
-            <button className="bg-[#5EFF6E] text-black hover:bg-[#4ee65d] px-6 py-2 rounded-lg text-sm font-medium">
-              Sign Up as Coach
-            </button>
+            {!session ? (
+              <Link href="/auth/signup">
+                <button className="bg-[#5EFF6E] text-black hover:bg-[#4ee65d] px-6 py-2 rounded-lg text-sm font-medium">
+                  Sign Up as Coach
+                </button>
+              </Link>
+            ) : userRole === 'COACH' ? (
+              <button
+                onClick={() => setIsContactModalOpen(true)}
+                className="bg-[#5EFF6E] text-black hover:bg-[#4ee65d] px-6 py-2 rounded-lg text-sm font-medium"
+              >
+                Contact {athlete.firstName}
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -206,6 +238,16 @@ export default function AthleteProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Contact Athlete Modal */}
+      {athlete && (
+        <ContactAthleteModal
+          isOpen={isContactModalOpen}
+          athleteId={athleteId}
+          athleteName={athlete.firstName}
+          onClose={() => setIsContactModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
