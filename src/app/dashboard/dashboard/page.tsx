@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { getAthleteByUserId, AthleteProfile } from '@/lib/api/athletes';
 import { getCompetitionResults, CompetitionResult } from '@/lib/api/competitions';
 import { ProfileFormModal } from '@/components/ProfileFormModal';
+import { CoachDashboard } from '@/components/coach/CoachDashboard';
 
 const EVENT_DISPLAY_NAMES: Record<string, string> = {
   ALL_AROUND: 'All Around',
@@ -17,6 +18,14 @@ const EVENT_DISPLAY_NAMES: Record<string, string> = {
 };
 
 export default function DashboardPage() {
+  const { role } = useAuth();
+  if (role === 'COACH') {
+    return <CoachDashboard />;
+  }
+  return <AthleteDashboard />;
+}
+
+function AthleteDashboard() {
   const { user } = useAuth();
   const [athlete, setAthlete] = useState<AthleteProfile | null>(null);
   const [results, setResults] = useState<CompetitionResult[]>([]);

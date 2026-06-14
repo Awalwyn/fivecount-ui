@@ -9,6 +9,7 @@ import { deletePost, type Post } from '@/lib/api/posts';
 import { ProfileFormModal } from '@/components/ProfileFormModal';
 import { PostComposerModal } from '@/components/PostComposerModal';
 import { RecruitingStatusDisplay } from '@/components/RecruitingStatusBadge';
+import { CoachProfile } from '@/components/coach/CoachProfile';
 import {
   LineChart,
   Line,
@@ -26,6 +27,14 @@ import {
 import { Camera, Play, MapPin, Calendar, Instagram, Trophy, Medal, Award, ExternalLink, MoreHorizontal, Heart, MessageCircle, Bookmark } from 'lucide-react';
 
 export default function ProfilePage() {
+  const { role } = useAuth();
+  if (role === 'COACH') {
+    return <CoachProfile />;
+  }
+  return <AthleteProfilePage />;
+}
+
+function AthleteProfilePage() {
   const { user } = useAuth();
   const [athlete, setAthlete] = useState<AthleteProfile | null>(null);
   const [results, setResults] = useState<CompetitionResult[]>([]);
