@@ -46,12 +46,12 @@ export function CoachDashboard() {
           getProspects(),
           getRoster(),
           getCoachActivity(),
-          searchAthletes({}),
+          searchAthletes(),
         ]);
         setProspects(p);
         setRoster(r);
         setActivity(a);
-        setRecommended(rec.slice(0, 4));
+        setRecommended(rec.content.slice(0, 4));
       } finally {
         setLoading(false);
       }
