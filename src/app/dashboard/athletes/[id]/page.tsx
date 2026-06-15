@@ -124,7 +124,7 @@ export default function AthleteDetailPage() {
             <Stat label="AA Average" value={(athlete.allAroundAvg ?? 0).toFixed(2)} accent />
             <Stat label="Best Event" value={EVENT_LABELS[bestEvent[0]]} sub={bestEvent[1].high.toFixed(2)} />
             <Stat label="Level" value={athlete.level} />
-            <Stat label="Height/Weight" value={athlete.heightWeight} small />
+            <Stat label="GPA" value={athlete.gpa} />
           </div>
         </div>
       </div>

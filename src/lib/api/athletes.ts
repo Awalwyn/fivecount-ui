@@ -291,7 +291,7 @@ export interface AthleteDetail extends AthleteSearchResult {
   bio: string;
   instagramHandle?: string;
   level: string;
-  heightWeight: string;
+  gpa: string;
   eventStats: Record<string, { avg: number; high: number; count: number }>;
   recentMeets: MeetResultSummary[];
   awards: AthleteAward[];
@@ -358,7 +358,7 @@ function buildAthleteDetail(base: AthleteSearchResult): AthleteDetail {
     bio: `${base.firstName} is a Level 10 men's gymnast competing for ${base.clubName}. Strongest on ${base.topEvents[0]?.event.replace('_', ' ').toLowerCase()}, with consistent all-around scores in the mid-80s and a focus on NCAA Division I goals.`,
     instagramHandle: `${base.firstName.toLowerCase()}_${base.lastName.toLowerCase()}`,
     level: 'Level 10',
-    heightWeight: `5'7" · 145 lbs`,
+    gpa: '3.8',
     eventStats,
     recentMeets,
     awards,
