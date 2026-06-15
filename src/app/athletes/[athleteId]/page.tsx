@@ -107,7 +107,7 @@ export default function AthleteProfilePage() {
   const scoresCount = new Set(results.map(r => `${r.meetName}|${r.meetDate}`)).size;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] space-y-6">
+    <div className={`min-h-screen bg-[#0a0a0a] space-y-6 ${!session ? 'pb-24' : ''}`}>
       {/* Cover Photo */}
       <div className="bg-gradient-to-br from-[#1a2a1a] via-[#0f1f0f] to-[#0a0a0a] h-48 md:h-56 mx-6 rounded-t-xl" />
 
@@ -247,6 +247,20 @@ export default function AthleteProfilePage() {
           athleteName={athlete.firstName}
           onClose={() => setIsContactModalOpen(false)}
         />
+      )}
+
+      {/* Coach Sign-Up Banner (sticky bottom, no session) */}
+      {!session && (
+        <div className="fixed bottom-0 left-0 right-0 bg-[#111111] border-t border-[#1f1f1f] px-6 py-4 flex items-center justify-between z-40">
+          <p className="text-white text-sm">
+            Are you a coach? Sign up to reach out to this athlete.
+          </p>
+          <Link href="/auth/signup">
+            <button className="bg-[#5EFF6E] text-black hover:bg-[#4ee65d] px-6 py-2 rounded-lg text-sm font-medium flex-shrink-0 ml-4">
+              Sign Up as Coach
+            </button>
+          </Link>
+        </div>
       )}
     </div>
   );
