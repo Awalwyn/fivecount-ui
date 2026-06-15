@@ -4,7 +4,6 @@ import { ReactNode } from 'react';
 import { DashboardHeader } from './DashboardHeader';
 import { DashboardSidebar } from './DashboardSidebar';
 import { MessagesProvider } from '@/contexts/MessagesContext';
-import { ChatDock } from '@/components/messages/ChatDock';
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -17,7 +16,6 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             {children}
           </main>
         </div>
-        <ChatDock />
       </div>
     </MessagesProvider>
   );
