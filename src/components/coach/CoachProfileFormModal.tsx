@@ -103,7 +103,7 @@ export function CoachProfileFormModal({
 
       let result: CoachProfile;
       if (isEditMode && existingProfile) {
-        result = await updateCoachProfile(existingProfile.id, cleanData);
+        result = await updateCoachProfile(cleanData);
       } else {
         result = await createCoachProfile(cleanData);
       }
