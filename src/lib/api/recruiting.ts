@@ -1,72 +1,126 @@
 import { apiCall } from './client';
 
-export type PipelineStage = 'WATCHING' | 'CONTACTED' | 'IN_TALKS' | 'OFFERED' | 'COMMITTED';
+// Pipeline Stages
+export const PIPELINE_STAGES = {
+  WATCHING: 'WATCHING',
+  CONTACTED: 'CONTACTED',
+  IN_TALKS: 'IN_TALKS',
+  OFFERED: 'OFFERED',
+  COMMITTED: 'COMMITTED',
+} as const;
 
-export const PIPELINE_STAGES: { id: PipelineStage; label: string }[] = [
-  { id: 'WATCHING', label: 'Watching' },
-  { id: 'CONTACTED', label: 'Contacted' },
-  { id: 'IN_TALKS', label: 'In Talks' },
-  { id: 'OFFERED', label: 'Offered' },
-  { id: 'COMMITTED', label: 'Committed' },
-];
+export type PipelineStage = typeof PIPELINE_STAGES[keyof typeof PIPELINE_STAGES];
+
+// Activity Types
+export const ACTIVITY_TYPES = {
+  NEW_SCORE: 'NEW_SCORE',
+  NEW_POST: 'NEW_POST',
+  REPLY: 'REPLY',
+  PROFILE_VIEW: 'PROFILE_VIEW',
+  COMMIT: 'COMMIT',
+} as const;
+
+export type ActivityType = typeof ACTIVITY_TYPES[keyof typeof ACTIVITY_TYPES];
+
+// Recruiting Status (athlete's own status)
+export const RECRUITING_STATUSES = {
+  OPEN_TO_RECRUITING: 'OPEN_TO_RECRUITING',
+  VERBALLY_COMMITTED: 'VERBALLY_COMMITTED',
+  SIGNED: 'SIGNED',
+  NOT_RECRUITING: 'NOT_RECRUITING',
+} as const;
+
+export type RecruitingStatus = typeof RECRUITING_STATUSES[keyof typeof RECRUITING_STATUSES];
+
+// Event Types
+export const EVENT_TYPES = {
+  FLOOR: 'FLOOR',
+  POMMEL_HORSE: 'POMMEL_HORSE',
+  RINGS: 'RINGS',
+  VAULT: 'VAULT',
+  PARALLEL_BARS: 'PARALLEL_BARS',
+  HIGH_BAR: 'HIGH_BAR',
+  ALL_AROUND: 'ALL_AROUND',
+} as const;
+
+export type EventType = typeof EVENT_TYPES[keyof typeof EVENT_TYPES];
+
+// Types
+export interface EventScore {
+  name: EventType;
+  score: number;
+}
 
 export interface Prospect {
-  id: string;
   athleteId: string;
-  name: string;
+  athleteName: string;
   gradYear: number;
-  clubName: string;
   state: string;
+  topEvent: EventScore;
   allAroundAvg: number;
-  topEvent: string;
   stage: PipelineStage;
-  lastActivity: string;
+  lastActivityAt: string;
 }
 
 export interface RosterAthlete {
-  id: string;
-  name: string;
+  athleteId: string;
+  athleteName: string;
   gradYear: number;
-  classYear: string;
+  recruitingStatus: RecruitingStatus;
+  topEvent: EventScore;
   allAroundAvg: number;
-  topEvent: string;
-  topEventScore: number;
-  status: 'COMMITTED' | 'SIGNED' | 'ENROLLED';
+}
+
+export interface CoachStats {
+  watching: number;
+  contacted: number;
+  inTalks: number;
+  offered: number;
+  committed: number;
+  total: number;
+}
+
+export interface CoachActivity {
+  type: ActivityType;
+  athleteName: string;
+  athleteId: string;
+  detail: string;
+  createdAt: string;
 }
 
 export interface TeamStat {
   label: string;
-  value: string;
-  sub?: string;
+  value: number;
 }
 
-export interface CoachActivity {
-  id: string;
-  type: 'NEW_SCORE' | 'NEW_POST' | 'REPLY' | 'PROFILE_VIEW' | 'COMMIT';
-  athleteName: string;
-  detail: string;
-  time: string;
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  hasMore: boolean;
 }
 
-// Coach: Get all prospects
-export async function getProspects(): Promise<Prospect[]> {
-  return apiCall<Prospect[]>('/api/coach/prospects', { method: 'GET' });
+// API Functions
+export async function getProspects(
+  limit: number = 50,
+  offset: number = 0
+): Promise<PaginatedResponse<Prospect>> {
+  const params = new URLSearchParams();
+  params.append('limit', limit.toString());
+  params.append('offset', offset.toString());
+
+  return apiCall<PaginatedResponse<Prospect>>(`/api/coach/prospects?${params}`);
 }
 
-// Coach: Get prospects by stage
-export async function getProspectsByStage(stage: PipelineStage): Promise<Prospect[]> {
-  return apiCall<Prospect[]>(`/api/coach/prospects/stage/${stage}`, { method: 'GET' });
-}
-
-// Coach: Update prospect stage
-export async function updateProspectStage(prospectId: string, stage: PipelineStage): Promise<Prospect> {
-  return apiCall<Prospect>(`/api/coach/prospects/${prospectId}/stage`, {
+export async function updateProspectStage(
+  athleteId: string,
+  newStage: PipelineStage
+): Promise<Prospect> {
+  return apiCall<Prospect>(`/api/coach/prospects/${athleteId}/stage`, {
     method: 'PUT',
-    body: JSON.stringify({ stage }),
+    body: JSON.stringify({ stage: newStage }),
   });
 }
 
-// Coach: Add prospect
 export async function addProspect(athleteId: string): Promise<Prospect> {
   return apiCall<Prospect>('/api/coach/prospects', {
     method: 'POST',
@@ -74,56 +128,49 @@ export async function addProspect(athleteId: string): Promise<Prospect> {
   });
 }
 
-// Coach: Remove prospect
-export async function removeProspect(prospectId: string): Promise<void> {
-  await apiCall<void>(`/api/coach/prospects/${prospectId}`, { method: 'DELETE' });
+export async function removeProspect(athleteId: string): Promise<void> {
+  return apiCall<void>(`/api/coach/prospects/${athleteId}`, {
+    method: 'DELETE',
+  });
 }
 
-// Coach: Get roster (committed athletes)
-export async function getRoster(): Promise<RosterAthlete[]> {
-  return apiCall<RosterAthlete[]>('/api/coach/roster/committed', { method: 'GET' });
+export async function getRoster(
+  limit: number = 25,
+  offset: number = 0
+): Promise<PaginatedResponse<RosterAthlete>> {
+  const params = new URLSearchParams();
+  params.append('limit', limit.toString());
+  params.append('offset', offset.toString());
+
+  return apiCall<PaginatedResponse<RosterAthlete>>(`/api/coach/roster/committed?${params}`);
 }
 
-// Coach: Get roster count
-export async function getRosterCount(): Promise<{ count: number }> {
-  return apiCall<{ count: number }>('/api/coach/roster/count', { method: 'GET' });
+export async function getCoachStats(): Promise<CoachStats> {
+  return apiCall<CoachStats>('/api/coach/dashboard/stats');
 }
 
-// Coach: Get activity feed
-export async function getCoachActivity(): Promise<CoachActivity[]> {
-  return apiCall<CoachActivity[]>('/api/coach/dashboard/activity', { method: 'GET' });
+export async function getCoachActivity(
+  limit: number = 10,
+  offset: number = 0
+): Promise<PaginatedResponse<CoachActivity>> {
+  const params = new URLSearchParams();
+  params.append('limit', limit.toString());
+  params.append('offset', offset.toString());
+
+  return apiCall<PaginatedResponse<CoachActivity>>(`/api/coach/dashboard/activity?${params}`);
 }
 
-// Coach: Get dashboard stats
-export async function getCoachStats(): Promise<{
-  watching: number;
-  contacted: number;
-  inTalks: number;
-  offered: number;
-  committed: number;
-}> {
-  return apiCall<any>('/api/coach/dashboard/stats', { method: 'GET' });
-}
-
-// Calculate team stats from roster (local computation)
+// Client-side computation for team stats from roster
 export function getTeamStats(roster: RosterAthlete[]): TeamStat[] {
-  if (roster.length === 0) {
-    return [
-      { label: 'Roster Size', value: '0', sub: 'active + incoming' },
-      { label: 'Team AA Avg', value: '0', sub: 'all-around' },
-      { label: 'Top AA', value: '0', sub: 'team high' },
-      { label: 'Incoming', value: '0', sub: 'committed/signed' },
-    ];
-  }
-
-  const avgAA = (roster.reduce((sum, r) => sum + r.allAroundAvg, 0) / roster.length).toFixed(2);
-  const topAA = Math.max(...roster.map(r => r.allAroundAvg)).toFixed(2);
-  const incoming = roster.filter(r => r.status === 'COMMITTED' || r.status === 'SIGNED').length;
+  const totalCommitted = roster.length;
+  const verballyCommitted = roster.filter((r) => r.recruitingStatus === 'VERBALLY_COMMITTED').length;
+  const signed = roster.filter((r) => r.recruitingStatus === 'SIGNED').length;
+  const notRecruiting = roster.filter((r) => r.recruitingStatus === 'NOT_RECRUITING').length;
 
   return [
-    { label: 'Roster Size', value: String(roster.length), sub: 'active + incoming' },
-    { label: 'Team AA Avg', value: avgAA, sub: 'all-around' },
-    { label: 'Top AA', value: topAA, sub: 'team high' },
-    { label: 'Incoming', value: String(incoming), sub: 'committed/signed' },
+    { label: 'Total Committed', value: totalCommitted },
+    { label: 'Verbally Committed', value: verballyCommitted },
+    { label: 'Signed', value: signed },
+    { label: 'Not Recruiting', value: notRecruiting },
   ];
 }
