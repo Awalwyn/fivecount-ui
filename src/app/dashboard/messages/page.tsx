@@ -7,9 +7,10 @@ import { formatRelativeTime } from '@/lib/api/messages';
 
 export default function MessagesPage() {
   const { user } = useAuth();
-  const { conversations, activeConversationId, setActiveConversationId, unreadCount, isLoading, error, sendMessageToConversation } = useMessages();
+  const { conversations, activeConversationId, selectConversation, totalUnread, isLoading, error, sendMessage, getConversation } = useMessages();
   const [messageText, setMessageText] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -20,24 +21,24 @@ export default function MessagesPage() {
     scrollToBottom();
   }, [activeConversationId, conversations]);
 
-  const activeConversation = conversations.find(c => c.id === activeConversationId);
+  const activeConversation = getConversation(activeConversationId ?? '');
 
-  const handleSendMessage = async () => {
+  const filteredConversations = conversations.filter(conv =>
+    conv.participant.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleSendMessage = () => {
     if (!messageText.trim() || !activeConversationId || isSending) return;
 
     try {
       setIsSending(true);
-      await sendMessageToConversation(activeConversationId, messageText);
+      sendMessage(activeConversationId, messageText);
       setMessageText('');
     } catch (error) {
       console.error('Failed to send message:', error);
     } finally {
       setIsSending(false);
     }
-  };
-
-  const handleSelectConversation = (conversationId: string) => {
-    setActiveConversationId(conversationId);
   };
 
   if (isLoading) {
@@ -64,28 +65,36 @@ export default function MessagesPage() {
       {/* Left Sidebar - Conversation List */}
       <div className="w-80 border-r border-[#1f1f1f] bg-[#111111] flex flex-col">
         <div className="p-6 border-b border-[#1f1f1f]">
-          <h1 className="heading-display text-2xl text-white">Messages</h1>
-          {unreadCount > 0 && (
-            <p className="text-xs text-[#5EFF6E] mt-2">{unreadCount} unread</p>
+          <h1 className="heading-display text-2xl text-white mb-4">Messages</h1>
+          {totalUnread > 0 && (
+            <p className="text-xs text-[#5EFF6E] mb-4">{totalUnread} unread</p>
           )}
+          <input
+            type="text"
+            placeholder="Search conversations..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full bg-[#0a0a0a] border border-[#1f1f1f] text-white placeholder-gray-600 px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-[#5EFF6E]"
+          />
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {conversations.length === 0 ? (
+          {filteredConversations.length === 0 ? (
             <div className="p-6 text-center text-gray-500">
-              <p className="text-sm">No conversations yet</p>
+              <p className="text-sm">{searchQuery ? 'No conversations found' : 'No conversations yet'}</p>
             </div>
           ) : (
-            conversations.map(conv => {
+            filteredConversations.map(conv => {
               const lastMsg = conv.messages[conv.messages.length - 1];
+              const lastMsgText = lastMsg
+                ? (lastMsg.senderId === 'me' ? `You: ${lastMsg.text}` : lastMsg.text)
+                : '(no messages)';
               return (
                 <button
                   key={conv.id}
-                  onClick={() => handleSelectConversation(conv.id)}
+                  onClick={() => selectConversation(conv.id)}
                   className={`w-full text-left px-4 py-3 border-b border-[#1f1f1f] transition-colors ${
-                    activeConversationId === conv.id
-                      ? 'bg-[#1f1f1f]'
-                      : 'hover:bg-[#0f1f0f]'
+                    activeConversationId === conv.id ? 'bg-[#1f1f1f]' : 'hover:bg-[#0f1f0f]'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -100,7 +109,7 @@ export default function MessagesPage() {
                         )}
                       </div>
                       <p className="text-xs text-gray-500 mb-2">{conv.participant.subtitle}</p>
-                      <p className="text-xs text-gray-400 truncate">{lastMsg?.messageText || '(no messages)'}</p>
+                      <p className="text-xs text-gray-400 truncate">{lastMsgText}</p>
                     </div>
                     <p className="text-xs text-gray-500 flex-shrink-0">{formatRelativeTime(conv.lastMessageTime)}</p>
                   </div>
@@ -136,7 +145,7 @@ export default function MessagesPage() {
                 </div>
               ) : (
                 activeConversation.messages.map(msg => {
-                  const isCurrentUser = msg.senderId === user?.id;
+                  const isCurrentUser = msg.senderId === 'me' || msg.senderId === user?.id;
                   return (
                     <div
                       key={msg.id}
@@ -144,14 +153,12 @@ export default function MessagesPage() {
                     >
                       <div
                         className={`max-w-xs px-4 py-2 rounded-lg ${
-                          isCurrentUser
-                            ? 'bg-[#5EFF6E] text-black'
-                            : 'bg-[#1f1f1f] text-gray-100'
+                          isCurrentUser ? 'bg-[#5EFF6E] text-black' : 'bg-[#1f1f1f] text-gray-100'
                         }`}
                       >
-                        <p className="text-sm break-words">{msg.messageText}</p>
+                        <p className="text-sm break-words">{msg.text}</p>
                         <p className={`text-xs mt-1 ${isCurrentUser ? 'text-black/60' : 'text-gray-500'}`}>
-                          {new Date(msg.createdAt).toLocaleTimeString('en-US', {
+                          {new Date(msg.sentAt).toLocaleTimeString('en-US', {
                             hour: 'numeric',
                             minute: '2-digit',
                             hour12: true,

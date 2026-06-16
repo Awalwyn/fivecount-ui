@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMessages } from '@/contexts/MessagesContext';
+import { createReachOutConversation } from '@/lib/api/messages';
 
 interface ContactAthleteModalProps {
   isOpen: boolean;
@@ -18,7 +19,7 @@ export function ContactAthleteModal({
   onClose,
 }: ContactAthleteModalProps) {
   const router = useRouter();
-  const { startCoachReachOut } = useMessages();
+  const { startConversation } = useMessages();
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'duplicate' | 'error'>('idle');
@@ -31,7 +32,18 @@ export function ContactAthleteModal({
     setErrorMessage(null);
 
     try {
-      await startCoachReachOut(athleteId, athleteName, message);
+      const initials = athleteName
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase();
+
+      const conversation = createReachOutConversation(
+        { id: athleteId, name: athleteName, subtitle: '', initials },
+        message
+      );
+
+      startConversation(conversation);
 
       setStatus('success');
       setMessage('');
