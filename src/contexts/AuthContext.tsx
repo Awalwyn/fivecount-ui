@@ -60,7 +60,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
       options: {
-        data: metadata,
+        data: {
+          ...metadata,
+          role,
+        },
       },
     });
     if (error) throw error;
