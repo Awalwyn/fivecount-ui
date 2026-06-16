@@ -41,6 +41,12 @@ export function CoachProfile() {
     loadProfile();
   }, [user]);
 
+  useEffect(() => {
+    if (!isLoading && profile && completeness && !completeness.complete) {
+      setIsFormOpen(true);
+    }
+  }, [isLoading, profile, completeness]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -72,6 +78,36 @@ export function CoachProfile() {
             setCompleteness({ complete: false, missingFields: [] });
           }}
           existingProfile={null}
+        />
+      </div>
+    );
+  }
+
+  if (profile && completeness && !completeness.complete && !profile.firstName) {
+    return (
+      <div className="space-y-6">
+        <div className="h-32 bg-gradient-to-r from-green-900/20 to-slate-900/20 rounded-lg" />
+        <div className="bg-[#1f1f1f] border border-[#2f2f2f] rounded-lg p-8">
+          <div className="flex items-start justify-between gap-6 mb-6">
+            <div>
+              <div className="w-20 h-20 rounded-full bg-[#2f2f2f] flex items-center justify-center mb-4 text-3xl text-gray-600">+</div>
+              <h1 className="heading-display text-3xl text-gray-600 mb-2">Your Name</h1>
+              <p className="text-gray-600 text-sm">University · Position</p>
+            </div>
+            <button onClick={() => setIsFormOpen(true)} className="btn-primary flex-shrink-0">
+              Complete Profile
+            </button>
+          </div>
+          <p className="text-gray-500 text-sm">Add your details to start recruiting athletes and connecting with prospects.</p>
+        </div>
+        <CoachProfileFormModal
+          isOpen={isFormOpen}
+          onClose={() => setIsFormOpen(false)}
+          onSuccess={(updated) => {
+            setProfile(updated);
+            setCompleteness({ complete: true, missingFields: [] });
+          }}
+          existingProfile={profile}
         />
       </div>
     );

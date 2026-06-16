@@ -62,11 +62,11 @@ export function CoachProfileFormModal({
 
     if (isEditMode && existingProfile) {
       reset({
-        firstName: existingProfile.firstName,
-        lastName: existingProfile.lastName,
-        program: existingProfile.program,
-        position: existingProfile.position,
-        email: existingProfile.email,
+        firstName: existingProfile.firstName || '',
+        lastName: existingProfile.lastName || '',
+        program: existingProfile.program || '',
+        position: existingProfile.position || '',
+        email: existingProfile.email || user?.email || '',
         bio: existingProfile.bio || '',
         city: existingProfile.city || '',
         state: existingProfile.state || '',

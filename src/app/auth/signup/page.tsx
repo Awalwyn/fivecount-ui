@@ -109,6 +109,11 @@ export default function SignupPage() {
       return;
     }
 
+    if (role === 'COACH' && !formData.email.endsWith('.edu')) {
+      setError('Coaches must use a .edu email address');
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);

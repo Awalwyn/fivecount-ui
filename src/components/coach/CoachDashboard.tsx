@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { getCoachStats, getRoster, getCoachActivity } from '@/lib/api/recruiting';
 import { searchAthletes } from '@/lib/api/athletes';
+import { checkProfileCompleteness } from '@/lib/api/coaches';
 import { PipelineStageCard } from './PipelineStageCard';
 import { RosterCard } from './RosterCard';
 import { StatCardSkeleton } from './StatCardSkeleton';
@@ -63,6 +64,7 @@ export function CoachDashboard() {
   const [roster, setRoster] = useState<RosterAthlete[] | null>(null);
   const [activity, setActivity] = useState<any>(null);
   const [search, setSearch] = useState<any>(null);
+  const [profileComplete, setProfileComplete] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -72,17 +74,19 @@ export function CoachDashboard() {
       try {
         setError(null);
 
-        const [statsData, rosterData, activityData, searchData] = await Promise.all([
+        const [statsData, rosterData, activityData, searchData, completenessData] = await Promise.all([
           getCoachStats().catch(() => null),
           getRoster(50).then((res) => res.data || []).catch(() => []),
           getCoachActivity(10).then((res) => res.data || []).catch(() => []),
           searchAthletes(undefined, undefined, undefined, 0, 4).then((res) => res.content || []).catch(() => []),
+          checkProfileCompleteness().catch(() => null),
         ]);
 
         setStats(statsData);
         setRoster(rosterData as any);
         setActivity(activityData);
         setSearch(searchData);
+        setProfileComplete(completenessData?.complete ?? null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load dashboard');
       }
@@ -122,6 +126,23 @@ export function CoachDashboard() {
         <h1 className="heading-display text-4xl text-white mb-2">Coach Dashboard</h1>
         <p className="text-gray-400">Track your recruiting pipeline and roster</p>
       </div>
+
+      {/* Profile Completeness Banner */}
+      {profileComplete === false && (
+        <div className="bg-amber-950/20 border border-amber-700/30 rounded-lg p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-amber-400 font-medium">Complete Your Profile</p>
+              <p className="text-amber-300/80 text-sm mt-1">
+                Add your details to start recruiting athletes
+              </p>
+            </div>
+            <a href="/dashboard/profile" className="btn-primary text-sm px-4 py-2 flex-shrink-0">
+              Complete Profile →
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Pipeline Stats Section */}
       <div className="min-h-[100px]">
