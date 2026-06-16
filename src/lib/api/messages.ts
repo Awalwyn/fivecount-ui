@@ -35,7 +35,7 @@ export interface Conversation {
 
 // Coach: Get sent contact requests (their outgoing conversations)
 export async function getCoachConversations(): Promise<Conversation[]> {
-  const requests = await apiCall<any[]>('/coach/recruiting/contact-requests', {
+  const requests = await apiCall<any[]>('/api/coach/recruiting/contact-requests', {
     method: 'GET',
   });
 
@@ -67,7 +67,7 @@ export async function getCoachConversations(): Promise<Conversation[]> {
 
 // Athlete: Get received contact requests (inbox)
 export async function getAthleteConversations(): Promise<Conversation[]> {
-  const requests = await apiCall<any[]>('/athlete/inbox/contact-requests', {
+  const requests = await apiCall<any[]>('/api/athlete/inbox/contact-requests', {
     method: 'GET',
   });
 
@@ -108,7 +108,7 @@ export async function getConversations(role: 'ATHLETE' | 'COACH'): Promise<Conve
 // Coach: Get conversation thread with athlete
 export async function getCoachConversationThread(contactRequestId: string): Promise<ContactRequestMessage[]> {
   return apiCall<ContactRequestMessage[]>(
-    `/coach/recruiting/contact-requests/${contactRequestId}/messages`,
+    `/api/coach/recruiting/contact-requests/${contactRequestId}/messages`,
     {
       method: 'GET',
     }
@@ -118,7 +118,7 @@ export async function getCoachConversationThread(contactRequestId: string): Prom
 // Athlete: Get conversation thread with coach
 export async function getAthleteConversationThread(contactRequestId: string): Promise<ContactRequestMessage[]> {
   return apiCall<ContactRequestMessage[]>(
-    `/athlete/inbox/contact-requests/${contactRequestId}/messages`,
+    `/api/athlete/inbox/contact-requests/${contactRequestId}/messages`,
     {
       method: 'GET',
     }
@@ -128,7 +128,7 @@ export async function getAthleteConversationThread(contactRequestId: string): Pr
 // Coach: Send message in conversation
 export async function sendCoachMessage(contactRequestId: string, text: string): Promise<ContactRequestMessage> {
   return apiCall<ContactRequestMessage>(
-    `/coach/recruiting/contact-requests/${contactRequestId}/messages`,
+    `/api/coach/recruiting/contact-requests/${contactRequestId}/messages`,
     {
       method: 'POST',
       body: JSON.stringify({ messageText: text }),
@@ -139,7 +139,7 @@ export async function sendCoachMessage(contactRequestId: string, text: string): 
 // Athlete: Reply to coach message
 export async function sendAthleteMessage(contactRequestId: string, text: string): Promise<ContactRequestMessage> {
   return apiCall<ContactRequestMessage>(
-    `/athlete/inbox/contact-requests/${contactRequestId}/messages`,
+    `/api/athlete/inbox/contact-requests/${contactRequestId}/messages`,
     {
       method: 'POST',
       body: JSON.stringify({ messageText: text }),
@@ -149,7 +149,7 @@ export async function sendAthleteMessage(contactRequestId: string, text: string)
 
 // Coach: Initiate contact with athlete
 export async function initiateCoachContact(athleteId: string, initialMessage: string): Promise<any> {
-  return apiCall<any>('/coach/recruiting/contact-requests', {
+  return apiCall<any>('/api/coach/recruiting/contact-requests', {
     method: 'POST',
     body: JSON.stringify({
       athleteId,
