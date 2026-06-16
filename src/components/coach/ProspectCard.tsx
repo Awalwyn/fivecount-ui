@@ -45,8 +45,8 @@ export function ProspectCard({ prospect, stage }: ProspectCardProps) {
         {/* Athletics: Top Event + AA + GPA (if available) */}
         <div className="space-y-1">
           <p className="text-sm text-gray-700">
-            <span className="font-medium">{prospect.topEvent.name}</span>
-            <span className="text-gray-600">: {prospect.topEvent.score.toFixed(1)}</span>
+            <span className="font-medium">{prospect.topEvent}</span>
+            <span className="text-gray-600">: {prospect.topEventScore.toFixed(1)}</span>
           </p>
 
           <p className="text-xs font-medium text-gray-900">
