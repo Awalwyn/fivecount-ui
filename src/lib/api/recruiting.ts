@@ -119,7 +119,7 @@ export async function getProspects(
   params.append('size', limit.toString());
 
   const response = await apiCall<SpringPage<Prospect>>(
-    `/api/coach/prospects?${params}`
+    `/coach/prospects?${params}`
   );
   return {
     data: response.content,
@@ -133,7 +133,7 @@ export async function updateProspectStage(
   newStage: PipelineStage
 ): Promise<Prospect> {
   return apiCall<Prospect>(
-    `/api/coach/prospects/${prospectId}/stage?stage=${newStage}`,
+    `/coach/prospects/${prospectId}/stage?stage=${newStage}`,
     {
       method: 'PUT',
     }
@@ -141,14 +141,14 @@ export async function updateProspectStage(
 }
 
 export async function addProspect(athleteId: string): Promise<Prospect> {
-  return apiCall<Prospect>('/api/coach/prospects', {
+  return apiCall<Prospect>('/coach/prospects', {
     method: 'POST',
     body: JSON.stringify({ athleteId }),
   });
 }
 
 export async function removeProspect(prospectId: string): Promise<void> {
-  return apiCall<void>(`/api/coach/prospects/${prospectId}`, {
+  return apiCall<void>(`/coach/prospects/${prospectId}`, {
     method: 'DELETE',
   });
 }
@@ -163,7 +163,7 @@ export async function getRoster(
   params.append('size', limit.toString());
 
   const response = await apiCall<SpringPage<RosterAthlete>>(
-    `/api/coach/roster/committed?${params}`
+    `/coach/roster/committed?${params}`
   );
   return {
     data: response.content,
@@ -173,7 +173,7 @@ export async function getRoster(
 }
 
 export async function getCoachStats(): Promise<CoachStats> {
-  return apiCall<CoachStats>('/api/coach/dashboard/stats');
+  return apiCall<CoachStats>('/coach/dashboard/stats');
 }
 
 export async function getCoachActivity(
@@ -186,7 +186,7 @@ export async function getCoachActivity(
   params.append('size', limit.toString());
 
   const response = await apiCall<SpringPage<CoachActivity>>(
-    `/api/coach/dashboard/activity?${params}`
+    `/coach/dashboard/activity?${params}`
   );
   return {
     data: response.content,

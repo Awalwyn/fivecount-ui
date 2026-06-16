@@ -22,23 +22,23 @@ export interface ProfileCompletenessResponse {
 }
 
 export async function getCoachProfile(): Promise<CoachProfile> {
-  return apiCall<CoachProfile>('/api/coach/profile');
+  return apiCall<CoachProfile>('/coach/profile');
 }
 
 export async function createCoachProfile(data: Omit<CoachProfile, 'id' | 'userId' | 'verificationStatus' | 'createdAt' | 'updatedAt'>): Promise<CoachProfile> {
-  return apiCall<CoachProfile>('/api/coach/profile', {
+  return apiCall<CoachProfile>('/coach/profile', {
     method: 'POST',
     body: JSON.stringify(data),
   });
 }
 
 export async function updateCoachProfile(data: Partial<Omit<CoachProfile, 'id' | 'userId' | 'verificationStatus' | 'createdAt' | 'updatedAt'>>): Promise<CoachProfile> {
-  return apiCall<CoachProfile>('/api/coach/profile', {
+  return apiCall<CoachProfile>('/coach/profile', {
     method: 'PUT',
     body: JSON.stringify(data),
   });
 }
 
 export async function checkProfileCompleteness(): Promise<ProfileCompletenessResponse> {
-  return apiCall<ProfileCompletenessResponse>('/api/coach/profile/complete');
+  return apiCall<ProfileCompletenessResponse>('/coach/profile/complete');
 }
