@@ -45,30 +45,39 @@ export const EVENT_TYPES = {
 
 export type EventType = typeof EVENT_TYPES[keyof typeof EVENT_TYPES];
 
-// Types
-export interface EventScore {
-  name: EventType;
-  score: number;
+// Spring Page response shape from backend
+interface SpringPage<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
 }
 
+// Types
 export interface Prospect {
+  id: string;
   athleteId: string;
-  athleteName: string;
+  name: string;
   gradYear: number;
   state: string;
-  topEvent: EventScore;
+  topEvent: string;
+  topEventScore: number;
   allAroundAvg: number;
+  gpa?: number;
   stage: PipelineStage;
-  lastActivityAt: string;
+  lastActivity: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface RosterAthlete {
-  athleteId: string;
-  athleteName: string;
+  id: string;
+  firstName: string;
+  lastName: string;
   gradYear: number;
+  state: string;
   recruitingStatus: RecruitingStatus;
-  topEvent: EventScore;
-  allAroundAvg: number;
+  topEvents: Array<{ event: string; averageScore: number }>;
 }
 
 export interface CoachStats {
@@ -104,21 +113,31 @@ export async function getProspects(
   limit: number = 50,
   offset: number = 0
 ): Promise<PaginatedResponse<Prospect>> {
+  const page = Math.floor(offset / limit);
   const params = new URLSearchParams();
-  params.append('limit', limit.toString());
-  params.append('offset', offset.toString());
+  params.append('page', page.toString());
+  params.append('size', limit.toString());
 
-  return apiCall<PaginatedResponse<Prospect>>(`/api/coach/prospects?${params}`);
+  const response = await apiCall<SpringPage<Prospect>>(
+    `/api/coach/prospects?${params}`
+  );
+  return {
+    data: response.content,
+    total: response.totalElements,
+    hasMore: response.number < response.totalPages - 1,
+  };
 }
 
 export async function updateProspectStage(
-  athleteId: string,
+  prospectId: string,
   newStage: PipelineStage
 ): Promise<Prospect> {
-  return apiCall<Prospect>(`/api/coach/prospects/${athleteId}/stage`, {
-    method: 'PUT',
-    body: JSON.stringify({ stage: newStage }),
-  });
+  return apiCall<Prospect>(
+    `/api/coach/prospects/${prospectId}/stage?stage=${newStage}`,
+    {
+      method: 'PUT',
+    }
+  );
 }
 
 export async function addProspect(athleteId: string): Promise<Prospect> {
@@ -128,8 +147,8 @@ export async function addProspect(athleteId: string): Promise<Prospect> {
   });
 }
 
-export async function removeProspect(athleteId: string): Promise<void> {
-  return apiCall<void>(`/api/coach/prospects/${athleteId}`, {
+export async function removeProspect(prospectId: string): Promise<void> {
+  return apiCall<void>(`/api/coach/prospects/${prospectId}`, {
     method: 'DELETE',
   });
 }
@@ -138,11 +157,19 @@ export async function getRoster(
   limit: number = 25,
   offset: number = 0
 ): Promise<PaginatedResponse<RosterAthlete>> {
+  const page = Math.floor(offset / limit);
   const params = new URLSearchParams();
-  params.append('limit', limit.toString());
-  params.append('offset', offset.toString());
+  params.append('page', page.toString());
+  params.append('size', limit.toString());
 
-  return apiCall<PaginatedResponse<RosterAthlete>>(`/api/coach/roster/committed?${params}`);
+  const response = await apiCall<SpringPage<RosterAthlete>>(
+    `/api/coach/roster/committed?${params}`
+  );
+  return {
+    data: response.content,
+    total: response.totalElements,
+    hasMore: response.number < response.totalPages - 1,
+  };
 }
 
 export async function getCoachStats(): Promise<CoachStats> {
@@ -153,19 +180,31 @@ export async function getCoachActivity(
   limit: number = 10,
   offset: number = 0
 ): Promise<PaginatedResponse<CoachActivity>> {
+  const page = Math.floor(offset / limit);
   const params = new URLSearchParams();
-  params.append('limit', limit.toString());
-  params.append('offset', offset.toString());
+  params.append('page', page.toString());
+  params.append('size', limit.toString());
 
-  return apiCall<PaginatedResponse<CoachActivity>>(`/api/coach/dashboard/activity?${params}`);
+  const response = await apiCall<SpringPage<CoachActivity>>(
+    `/api/coach/dashboard/activity?${params}`
+  );
+  return {
+    data: response.content,
+    total: response.totalElements,
+    hasMore: response.number < response.totalPages - 1,
+  };
 }
 
 // Client-side computation for team stats from roster
 export function getTeamStats(roster: RosterAthlete[]): TeamStat[] {
   const totalCommitted = roster.length;
-  const verballyCommitted = roster.filter((r) => r.recruitingStatus === 'VERBALLY_COMMITTED').length;
+  const verballyCommitted = roster.filter(
+    (r) => r.recruitingStatus === 'VERBALLY_COMMITTED'
+  ).length;
   const signed = roster.filter((r) => r.recruitingStatus === 'SIGNED').length;
-  const notRecruiting = roster.filter((r) => r.recruitingStatus === 'NOT_RECRUITING').length;
+  const notRecruiting = roster.filter(
+    (r) => r.recruitingStatus === 'NOT_RECRUITING'
+  ).length;
 
   return [
     { label: 'Total Committed', value: totalCommitted },

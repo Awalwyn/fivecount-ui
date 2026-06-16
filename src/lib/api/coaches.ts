@@ -8,6 +8,7 @@ export interface CoachProfile {
   program: string;
   position: string;
   email: string;
+  verificationStatus: string;
   bio?: string;
   city?: string;
   state?: string;
@@ -20,26 +21,24 @@ export interface ProfileCompletenessResponse {
   missingFields: string[];
 }
 
-export async function getCoachProfile(userId: string): Promise<CoachProfile> {
-  return apiCall<CoachProfile>(`/api/coaches/profile/user/${userId}`);
+export async function getCoachProfile(): Promise<CoachProfile> {
+  return apiCall<CoachProfile>('/api/coach/profile');
 }
 
-export async function createCoachProfile(data: Omit<CoachProfile, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<CoachProfile> {
-  return apiCall<CoachProfile>('/api/coaches/profile', {
+export async function createCoachProfile(data: Omit<CoachProfile, 'id' | 'userId' | 'verificationStatus' | 'createdAt' | 'updatedAt'>): Promise<CoachProfile> {
+  return apiCall<CoachProfile>('/api/coach/profile', {
     method: 'POST',
     body: JSON.stringify(data),
   });
 }
 
-export async function updateCoachProfile(id: string, data: Partial<Omit<CoachProfile, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>): Promise<CoachProfile> {
-  return apiCall<CoachProfile>(`/api/coaches/profile/${id}`, {
+export async function updateCoachProfile(data: Partial<Omit<CoachProfile, 'id' | 'userId' | 'verificationStatus' | 'createdAt' | 'updatedAt'>>): Promise<CoachProfile> {
+  return apiCall<CoachProfile>('/api/coach/profile', {
     method: 'PUT',
     body: JSON.stringify(data),
   });
 }
 
 export async function checkProfileCompleteness(): Promise<ProfileCompletenessResponse> {
-  return apiCall<ProfileCompletenessResponse>('/api/coaches/profile/complete', {
-    method: 'GET',
-  });
+  return apiCall<ProfileCompletenessResponse>('/api/coach/profile/complete');
 }

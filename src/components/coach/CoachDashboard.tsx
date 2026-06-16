@@ -108,6 +108,14 @@ export function CoachDashboard() {
     'COMMITTED',
   ] as const;
 
+  const STAGE_TO_STATS_KEY: Record<string, keyof typeof stats> = {
+    WATCHING: 'watching',
+    CONTACTED: 'contacted',
+    IN_TALKS: 'inTalks',
+    OFFERED: 'offered',
+    COMMITTED: 'committed',
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -124,7 +132,7 @@ export function CoachDashboard() {
               <PipelineStageCard
                 key={stage}
                 stage={stage}
-                count={stats[stage.toLowerCase()] || 0}
+                count={stats[STAGE_TO_STATS_KEY[stage]] || 0}
               />
             ))}
           </div>
