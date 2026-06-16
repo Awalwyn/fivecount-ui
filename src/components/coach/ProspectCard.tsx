@@ -10,7 +10,7 @@ interface ProspectCardProps {
 }
 
 export function ProspectCard({ prospect, stage }: ProspectCardProps) {
-  const names = prospect.athleteName.split(' ');
+  const names = prospect.name.split(' ');
   const initials = `${names[0]?.[0] || ''}${names[1]?.[0] || ''}`.toUpperCase();
   const stageColor = PIPELINE_COLORS[stage];
   const borderColorClass = `border-${stageColor.tailwind.split('-')[0]}-${stageColor.tailwind.split('-')[1]}`;
@@ -30,7 +30,7 @@ export function ProspectCard({ prospect, stage }: ProspectCardProps) {
             {initials}
           </div>
           <h3 className="font-semibold text-sm text-gray-900 truncate">
-            {prospect.athleteName}
+            {prospect.name}
           </h3>
         </div>
 
