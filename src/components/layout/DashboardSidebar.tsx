@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { FEATURES } from '@/lib/features';
 import { SponsorBanner } from '@/components/SponsorBanner';
+import { useAuth } from '@/hooks/useAuth';
+import { useMessages } from '@/contexts/MessagesContext';
 
 interface NavLink {
   href: string;
@@ -13,13 +15,28 @@ interface NavLink {
 
 export function DashboardSidebar() {
   const pathname = usePathname();
+  const { role } = useAuth();
+  const { unreadCount } = useMessages();
 
-  const navLinks: NavLink[] = [
+  const baseLinks: NavLink[] = [
     { href: '/dashboard/dashboard', label: 'Dashboard', show: true },
     { href: '/dashboard/profile', label: 'Profile', show: true },
     { href: '/dashboard/competitions', label: 'Results', show: true },
     { href: '/dashboard/feed', label: 'Feed', show: true },
     { href: '/dashboard/athletes', label: 'Athletes', show: FEATURES.SEARCH },
+  ];
+
+  const coachLinks: NavLink[] = [
+    { href: '/dashboard/messages', label: 'Messages', show: true },
+  ];
+
+  const athleteLinks: NavLink[] = [
+    { href: '/dashboard/messages', label: 'Messages', show: true },
+  ];
+
+  const navLinks: NavLink[] = [
+    ...baseLinks,
+    ...(role === 'COACH' ? coachLinks : athleteLinks),
   ];
 
   return (
@@ -31,13 +48,18 @@ export function DashboardSidebar() {
             <Link
               key={link.href}
               href={link.href}
-              className={`block px-4 py-3 rounded-lg transition-all duration-200 text-sm font-medium ${
+              className={`flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 text-sm font-medium ${
                 pathname === link.href
                   ? 'bg-[#5EFF6E] text-black'
                   : 'text-gray-400 hover:text-white hover:bg-[#111111]'
               }`}
             >
-              {link.label}
+              <span>{link.label}</span>
+              {link.label === 'Messages' && unreadCount > 0 && (
+                <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5 text-black font-semibold bg-[#5EFF6E]">
+                  {unreadCount}
+                </span>
+              )}
             </Link>
           ) : null
         )}

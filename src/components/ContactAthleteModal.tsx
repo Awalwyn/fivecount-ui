@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { sendContactRequest } from '@/lib/api/contact-requests';
+import { useMessages } from '@/contexts/MessagesContext';
 
 interface ContactAthleteModalProps {
   isOpen: boolean;
@@ -16,6 +18,8 @@ export function ContactAthleteModal({
   athleteName,
   onClose,
 }: ContactAthleteModalProps) {
+  const router = useRouter();
+  const { startReachOutConversation } = useMessages();
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'duplicate' | 'error'>('idle');
@@ -29,11 +33,20 @@ export function ContactAthleteModal({
 
     try {
       await sendContactRequest(athleteId, message);
+
+      // Create conversation in messages system
+      try {
+        await startReachOutConversation(athleteId, athleteName, message);
+      } catch (convErr) {
+        console.error('Failed to create conversation:', convErr);
+      }
+
       setStatus('success');
       setMessage('');
       setTimeout(() => {
         onClose();
         setStatus('idle');
+        router.push('/dashboard/messages');
       }, 2000);
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Unknown error');
