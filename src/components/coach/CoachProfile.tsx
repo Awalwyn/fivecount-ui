@@ -25,7 +25,7 @@ export function CoachProfile() {
         setError(null);
 
         const [profileData, completenessData] = await Promise.all([
-          getCoachProfile(user!.id),
+          getCoachProfile(),
           checkProfileCompleteness(),
         ]);
 
