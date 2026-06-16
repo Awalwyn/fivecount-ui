@@ -16,28 +16,26 @@ interface NavLink {
 export function DashboardSidebar() {
   const pathname = usePathname();
   const { role } = useAuth();
-  const { unreadCount } = useMessages();
+  const { totalUnread } = useMessages();
 
-  const baseLinks: NavLink[] = [
-    { href: '/dashboard/dashboard', label: 'Dashboard', show: true },
-    { href: '/dashboard/profile', label: 'Profile', show: true },
-    { href: '/dashboard/competitions', label: 'Results', show: true },
-    { href: '/dashboard/feed', label: 'Feed', show: true },
-    { href: '/dashboard/athletes', label: 'Athletes', show: FEATURES.SEARCH },
-  ];
-
-  const coachLinks: NavLink[] = [
-    { href: '/dashboard/messages', label: 'Messages', show: true },
-  ];
-
-  const athleteLinks: NavLink[] = [
-    { href: '/dashboard/messages', label: 'Messages', show: true },
-  ];
-
-  const navLinks: NavLink[] = [
-    ...baseLinks,
-    ...(role === 'COACH' ? coachLinks : athleteLinks),
-  ];
+  const navLinks: NavLink[] = role === 'COACH'
+    ? [
+        { href: '/dashboard/dashboard', label: 'Dashboard', show: true },
+        { href: '/dashboard/athletes', label: 'Find Athletes', show: true },
+        { href: '/dashboard/recruiting', label: 'Recruiting', show: true },
+        { href: '/dashboard/roster', label: 'My Roster', show: true },
+        { href: '/dashboard/feed', label: 'Feed', show: true },
+        { href: '/dashboard/messages', label: 'Messages', show: true },
+        { href: '/dashboard/profile', label: 'Profile', show: true },
+      ]
+    : [
+        { href: '/dashboard/dashboard', label: 'Dashboard', show: true },
+        { href: '/dashboard/profile', label: 'Profile', show: true },
+        { href: '/dashboard/competitions', label: 'Results', show: true },
+        { href: '/dashboard/feed', label: 'Feed', show: true },
+        { href: '/dashboard/athletes', label: 'Athletes', show: FEATURES.SEARCH },
+        { href: '/dashboard/messages', label: 'Messages', show: true },
+      ];
 
   return (
     <aside className="w-64 border-r border-[#1f1f1f] bg-[#0a0a0a] flex flex-col">
@@ -55,9 +53,9 @@ export function DashboardSidebar() {
               }`}
             >
               <span>{link.label}</span>
-              {link.label === 'Messages' && unreadCount > 0 && (
-                <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5 text-black font-semibold bg-[#5EFF6E]">
-                  {unreadCount}
+              {link.label === 'Messages' && totalUnread > 0 && (
+                <span className="bg-[#5EFF6E] text-black text-xs rounded-full px-2 py-0.5 font-semibold">
+                  {totalUnread}
                 </span>
               )}
             </Link>

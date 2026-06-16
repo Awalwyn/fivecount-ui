@@ -87,10 +87,41 @@ export interface AthleteSearchResult {
   clubName: string;
   city: string;
   state: string;
+  allAroundAvg?: number;
   topEvents: Array<{
     event: EventType;
     averageScore: number;
   }>;
+}
+
+export interface MeetResultSummary {
+  id: string;
+  name: string;
+  date: string;
+  location: string;
+  scores: Partial<Record<EventType, number>>;
+  allAround: number;
+}
+
+export interface AthleteAward {
+  id: string;
+  title: string;
+  subtitle: string;
+  year: number;
+}
+
+export interface AthleteDetail extends AthleteSearchResult {
+  bio?: string;
+  instagramHandle?: string;
+  level?: string;
+  gpa?: string;
+  eventStats?: Record<string, { avg: number; high: number; count: number }>;
+  recentMeets?: MeetResultSummary[];
+  awards?: AthleteAward[];
+}
+
+export async function getAthleteDetail(id: string): Promise<AthleteDetail | null> {
+  return apiCall<AthleteDetail>(`/api/athletes/${id}/detail`);
 }
 
 export async function searchAthletes(

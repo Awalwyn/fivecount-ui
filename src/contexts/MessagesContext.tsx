@@ -1,36 +1,39 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import {
-  Conversation,
-  getConversations,
-  initiateCoachContact,
-  sendCoachMessage,
-  sendAthleteMessage,
-} from '@/lib/api/messages';
-import { useAuthContext } from './AuthContext';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { Conversation, ChatMessage, getConversations, createReachOutConversation } from '@/lib/api/messages';
 
 interface MessagesContextType {
   conversations: Conversation[];
+  totalUnread: number;
   activeConversationId: string | null;
-  setActiveConversationId: (id: string | null) => void;
-  unreadCount: number;
+  selectConversation: (id: string | null) => void;
+  isDockExpanded: boolean;
+  toggleDock: () => void;
+  openWindowIds: string[];
+  openDockWindow: (id: string) => void;
+  closeDockWindow: (id: string) => void;
+  sendMessage: (conversationId: string, text: string) => void;
+  startConversation: (conversation: Conversation, opts?: { openInDock?: boolean }) => void;
+  markRead: (conversationId: string) => void;
+  getConversation: (id: string) => Conversation | undefined;
   isLoading: boolean;
   error: string | null;
-  sendMessageToConversation: (conversationId: string, text: string) => Promise<void>;
-  startCoachReachOut: (athleteId: string, athleteName: string, firstMessage: string) => Promise<void>;
 }
 
 const MessagesContext = createContext<MessagesContextType | undefined>(undefined);
 
 export function MessagesProvider({ children }: { children: ReactNode }) {
-  const { role, user } = useAuthContext();
+  const { role } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [isDockExpanded, setIsDockExpanded] = useState(false);
+  const [openWindowIds, setOpenWindowIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load conversations on mount and when role changes
+  // Load conversations on mount and role change
   useEffect(() => {
     const loadConversations = async () => {
       try {
@@ -38,80 +41,110 @@ export function MessagesProvider({ children }: { children: ReactNode }) {
         setError(null);
         const data = await getConversations(role);
         setConversations(data);
-        if (data.length > 0 && !activeConversationId) {
-          setActiveConversationId(data[0].id);
-        }
+        setActiveConversationId(null);
+        setOpenWindowIds([]);
       } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : 'Failed to load conversations';
+        const msg = err instanceof Error ? err.message : 'Failed to load conversations';
         console.error('Failed to load conversations:', err);
-        setError(errorMsg);
+        setError(msg);
         setConversations([]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (user) {
-      loadConversations();
-    }
-  }, [role, user]);
+    loadConversations();
+  }, [role]);
 
-  const unreadCount = conversations.reduce((sum, conv) => sum + conv.unreadCount, 0);
+  const totalUnread = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
 
-  const sendMessageToConversation = async (conversationId: string, text: string) => {
-    try {
-      if (role === 'COACH') {
-        await sendCoachMessage(conversationId, text);
+  const getConversation = useCallback(
+    (id: string) => conversations.find(c => c.id === id),
+    [conversations]
+  );
+
+  const markRead = useCallback((conversationId: string) => {
+    setConversations(prev =>
+      prev.map(c => (c.id === conversationId ? { ...c, unreadCount: 0 } : c))
+    );
+  }, []);
+
+  const sendMessage = useCallback((conversationId: string, text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+
+    const newMessage: ChatMessage = {
+      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      conversationId,
+      senderId: 'me',
+      senderName: 'You',
+      text: trimmed,
+      sentAt: new Date().toISOString(),
+    };
+
+    setConversations(prev =>
+      prev.map(c =>
+        c.id === conversationId
+          ? { ...c, messages: [...c.messages, newMessage], lastMessageTime: new Date().toISOString() }
+          : c
+      )
+    );
+  }, []);
+
+  const selectConversation = useCallback((id: string | null) => {
+    setActiveConversationId(id);
+    if (id) markRead(id);
+  }, [markRead]);
+
+  const openDockWindow = useCallback((id: string) => {
+    setOpenWindowIds(prev => [...prev.filter(w => w !== id), id].slice(-3));
+    markRead(id);
+  }, [markRead]);
+
+  const closeDockWindow = useCallback((id: string) => {
+    setOpenWindowIds(prev => prev.filter(w => w !== id));
+  }, []);
+
+  const toggleDock = useCallback(() => {
+    setIsDockExpanded(open => !open);
+  }, []);
+
+  const startConversation = useCallback(
+    (conversation: Conversation, opts?: { openInDock?: boolean }) => {
+      setConversations(prev => {
+        const exists = prev.some(c => c.id === conversation.id);
+        return exists ? prev : [conversation, ...prev];
+      });
+
+      const targetId = conversation.id;
+      if (opts?.openInDock) {
+        setOpenWindowIds(prev => [...prev.filter(x => x !== targetId), targetId].slice(-3));
       } else {
-        await sendAthleteMessage(conversationId, text);
+        setActiveConversationId(targetId);
       }
-
-      // Refresh conversation thread to get the new message
-      const updatedConversations = await getConversations(role);
-      setConversations(updatedConversations);
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to send message';
-      console.error('Failed to send message:', err);
-      throw new Error(errorMsg);
-    }
-  };
-
-  const startCoachReachOut = async (
-    athleteId: string,
-    athleteName: string,
-    firstMessage: string
-  ) => {
-    try {
-      if (role !== 'COACH') {
-        throw new Error('Only coaches can initiate contact');
-      }
-
-      await initiateCoachContact(athleteId, firstMessage);
-
-      // Refresh conversations list
-      const updatedConversations = await getConversations(role);
-      setConversations(updatedConversations);
-      if (updatedConversations.length > 0) {
-        setActiveConversationId(updatedConversations[0].id);
-      }
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to initiate contact';
-      console.error('Failed to start reach-out conversation:', err);
-      throw new Error(errorMsg);
-    }
-  };
+      markRead(targetId);
+    },
+    [markRead]
+  );
 
   return (
     <MessagesContext.Provider
       value={{
         conversations,
+        totalUnread,
         activeConversationId,
-        setActiveConversationId,
-        unreadCount,
+        selectConversation,
+        isDockExpanded,
+        toggleDock,
+        openWindowIds,
+        openDockWindow,
+        closeDockWindow,
+        sendMessage,
+        startConversation,
+        markRead,
+        getConversation,
         isLoading,
         error,
-        sendMessageToConversation,
-        startCoachReachOut,
       }}
     >
       {children}

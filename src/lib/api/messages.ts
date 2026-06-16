@@ -1,14 +1,5 @@
 import { apiCall } from './client';
 
-export interface ChatMessage {
-  id: string;
-  conversationId: string;
-  senderId: string;
-  senderName: string;
-  text: string;
-  sentAt: string; // ISO timestamp
-}
-
 export interface ChatParticipant {
   id: string;
   name: string;
@@ -16,21 +7,33 @@ export interface ChatParticipant {
   initials: string;
 }
 
-export interface ContactRequestMessage {
+export interface ChatMessage {
   id: string;
-  contactRequestId: string;
+  conversationId: string;
   senderId: string;
   senderName: string;
-  messageText: string;
-  createdAt: string;
+  text: string;
+  sentAt: string;
 }
 
 export interface Conversation {
   id: string;
   participant: ChatParticipant;
-  messages: ContactRequestMessage[];
+  messages: ChatMessage[];
   lastMessageTime: string;
   unreadCount: number;
+}
+
+// Map backend message response to frontend ChatMessage format
+function mapBackendMessage(msg: any, conversationId: string): ChatMessage {
+  return {
+    id: msg.id,
+    conversationId,
+    senderId: msg.senderId,
+    senderName: msg.senderName,
+    text: msg.messageText || msg.text,
+    sentAt: msg.createdAt || msg.sentAt,
+  };
 }
 
 // Coach: Get sent contact requests (their outgoing conversations)
@@ -39,7 +42,6 @@ export async function getCoachConversations(): Promise<Conversation[]> {
     method: 'GET',
   });
 
-  // Transform contact requests into conversations
   return Promise.all(
     requests.map(async req => {
       const messages = await getCoachConversationThread(req.id);
@@ -58,8 +60,8 @@ export async function getCoachConversations(): Promise<Conversation[]> {
             .toUpperCase(),
         },
         messages,
-        lastMessageTime: lastMsg?.createdAt || req.createdAt,
-        unreadCount: 0, // Backend will track this if needed
+        lastMessageTime: lastMsg?.sentAt || req.createdAt,
+        unreadCount: 0,
       };
     })
   );
@@ -71,7 +73,6 @@ export async function getAthleteConversations(): Promise<Conversation[]> {
     method: 'GET',
   });
 
-  // Transform inbox requests into conversations
   return Promise.all(
     requests.map(async req => {
       const messages = await getAthleteConversationThread(req.id);
@@ -90,7 +91,7 @@ export async function getAthleteConversations(): Promise<Conversation[]> {
             .toUpperCase(),
         },
         messages,
-        lastMessageTime: lastMsg?.createdAt || req.createdAt,
+        lastMessageTime: lastMsg?.sentAt || req.createdAt,
         unreadCount: req.unreadCount || 0,
       };
     })
@@ -106,56 +107,77 @@ export async function getConversations(role: 'ATHLETE' | 'COACH'): Promise<Conve
 }
 
 // Coach: Get conversation thread with athlete
-export async function getCoachConversationThread(contactRequestId: string): Promise<ContactRequestMessage[]> {
-  return apiCall<ContactRequestMessage[]>(
+export async function getCoachConversationThread(contactRequestId: string): Promise<ChatMessage[]> {
+  const raw = await apiCall<any[]>(
     `/api/coach/recruiting/contact-requests/${contactRequestId}/messages`,
-    {
-      method: 'GET',
-    }
+    { method: 'GET' }
   );
+  return raw.map(msg => mapBackendMessage(msg, contactRequestId));
 }
 
 // Athlete: Get conversation thread with coach
-export async function getAthleteConversationThread(contactRequestId: string): Promise<ContactRequestMessage[]> {
-  return apiCall<ContactRequestMessage[]>(
+export async function getAthleteConversationThread(contactRequestId: string): Promise<ChatMessage[]> {
+  const raw = await apiCall<any[]>(
     `/api/athlete/inbox/contact-requests/${contactRequestId}/messages`,
-    {
-      method: 'GET',
-    }
+    { method: 'GET' }
   );
+  return raw.map(msg => mapBackendMessage(msg, contactRequestId));
 }
 
 // Coach: Send message in conversation
-export async function sendCoachMessage(contactRequestId: string, text: string): Promise<ContactRequestMessage> {
-  return apiCall<ContactRequestMessage>(
+export async function sendCoachMessage(contactRequestId: string, text: string): Promise<ChatMessage> {
+  const raw = await apiCall<any>(
     `/api/coach/recruiting/contact-requests/${contactRequestId}/messages`,
     {
       method: 'POST',
       body: JSON.stringify({ messageText: text }),
     }
   );
+  return mapBackendMessage(raw, contactRequestId);
 }
 
 // Athlete: Reply to coach message
-export async function sendAthleteMessage(contactRequestId: string, text: string): Promise<ContactRequestMessage> {
-  return apiCall<ContactRequestMessage>(
+export async function sendAthleteMessage(contactRequestId: string, text: string): Promise<ChatMessage> {
+  const raw = await apiCall<any>(
     `/api/athlete/inbox/contact-requests/${contactRequestId}/messages`,
     {
       method: 'POST',
       body: JSON.stringify({ messageText: text }),
     }
   );
+  return mapBackendMessage(raw, contactRequestId);
 }
 
 // Coach: Initiate contact with athlete
 export async function initiateCoachContact(athleteId: string, initialMessage: string): Promise<any> {
   return apiCall<any>('/api/coach/recruiting/contact-requests', {
     method: 'POST',
-    body: JSON.stringify({
-      athleteId,
-      initialMessage,
-    }),
+    body: JSON.stringify({ athleteId, initialMessage }),
   });
+}
+
+// Create a local reach-out conversation object (not persisted until sent)
+export function createReachOutConversation(
+  athlete: { id: string; name: string; subtitle: string; initials: string },
+  firstMessage: string
+): Conversation {
+  const convId = `conv-draft-${athlete.id}-${Date.now()}`;
+  return {
+    id: convId,
+    participant: athlete,
+    unreadCount: 0,
+    messages: [
+      {
+        id: `msg-${Date.now()}`,
+        conversationId: convId,
+        senderId: 'me',
+        senderName: 'You',
+        text: firstMessage,
+        sentAt: new Date().toISOString(),
+      },
+    ],
+    lastMessageTime: new Date().toISOString(),
+  };
 }
 
 export function formatRelativeTime(isoString: string): string {

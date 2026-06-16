@@ -1,15 +1,32 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 
 export function DashboardHeader() {
   const { user, signOut, role } = useAuth();
   const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const displayName = user?.user_metadata?.firstName
     ? `${user.user_metadata.firstName} ${user.user_metadata.lastName}`
     : user?.email;
+
+  const initials = user?.user_metadata?.firstName
+    ? `${user.user_metadata.firstName[0]}${user.user_metadata.lastName?.[0] ?? ''}`
+    : (user?.email?.[0]?.toUpperCase() ?? '?');
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   async function handleLogout() {
     try {
@@ -22,18 +39,42 @@ export function DashboardHeader() {
 
   return (
     <header className="border-b border-[#1f1f1f] px-6 py-4 flex justify-between items-center bg-[#111111]">
-      <h1 className="heading-display text-2xl text-[#5EFF6E]">FiveCount</h1>
-      <div className="flex items-center gap-6">
-        <div className="text-right">
-          <span className="text-gray-400 text-sm block">{displayName}</span>
-          <span className="text-[#5EFF6E] text-xs font-semibold">{role}</span>
-        </div>
+      <div className="flex items-center gap-3">
+        <h1 className="heading-display text-2xl text-[#5EFF6E]">FiveCount</h1>
+        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#1f1f1f] text-gray-400 uppercase tracking-wide">
+          {role}
+        </span>
+      </div>
+      <div className="relative" ref={menuRef}>
         <button
-          onClick={handleLogout}
-          className="btn-secondary text-sm px-4 py-2"
+          onClick={() => setMenuOpen(o => !o)}
+          className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-[#1f1f1f] transition-colors"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
         >
-          Logout
+          <span className="text-gray-300 text-sm hidden sm:block">{displayName}</span>
+          <span className="w-9 h-9 rounded-full bg-[#1f1f1f] text-[#5EFF6E] flex items-center justify-center text-sm font-semibold">
+            {initials}
+          </span>
         </button>
+        {menuOpen && (
+          <div
+            role="menu"
+            className="absolute right-0 mt-2 w-60 bg-[#111111] border border-[#1f1f1f] rounded-xl shadow-xl py-2 z-50"
+          >
+            <div className="px-4 py-2 border-b border-[#1f1f1f]">
+              <p className="text-sm text-white font-medium truncate">{displayName}</p>
+              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              role="menuitem"
+              className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-[#1f1f1f] transition-colors"
+            >
+              Logout
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );
