@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { sendContactRequest } from '@/lib/api/contact-requests';
 import { useMessages } from '@/contexts/MessagesContext';
 
 interface ContactAthleteModalProps {
@@ -19,27 +18,20 @@ export function ContactAthleteModal({
   onClose,
 }: ContactAthleteModalProps) {
   const router = useRouter();
-  const { startReachOutConversation } = useMessages();
+  const { startCoachReachOut } = useMessages();
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'duplicate' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setLoading(true);
     setStatus('idle');
     setErrorMessage(null);
 
     try {
-      await sendContactRequest(athleteId, message);
-
-      // Create conversation in messages system
-      try {
-        await startReachOutConversation(athleteId, athleteName, message);
-      } catch (convErr) {
-        console.error('Failed to create conversation:', convErr);
-      }
+      await startCoachReachOut(athleteId, athleteName, message);
 
       setStatus('success');
       setMessage('');

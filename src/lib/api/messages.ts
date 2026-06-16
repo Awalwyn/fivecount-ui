@@ -1,202 +1,161 @@
 import { apiCall } from './client';
 
-export interface ChatParticipant {
-  id: string;
-  name: string;
-  subtitle: string; // Role or team name
-  initials: string;
-  online?: boolean;
-}
-
 export interface ChatMessage {
   id: string;
   conversationId: string;
-  senderId: 'me' | string;
+  senderId: string;
   senderName: string;
   text: string;
   sentAt: string; // ISO timestamp
 }
 
+export interface ChatParticipant {
+  id: string;
+  name: string;
+  subtitle: string;
+  initials: string;
+}
+
+export interface ContactRequestMessage {
+  id: string;
+  contactRequestId: string;
+  senderId: string;
+  senderName: string;
+  messageText: string;
+  createdAt: string;
+}
+
 export interface Conversation {
   id: string;
   participant: ChatParticipant;
-  messages: ChatMessage[];
-  unreadCount: number;
+  messages: ContactRequestMessage[];
   lastMessageTime: string;
+  unreadCount: number;
 }
 
-// Mock data for demo/development
-export const COACH_CONVERSATIONS: Conversation[] = [
-  {
-    id: 'conv-1',
-    participant: {
-      id: 'athlete-1',
-      name: 'Marcus Chen',
-      subtitle: 'Class of 2027',
-      initials: 'MC',
-      online: true,
-    },
-    messages: [
-      {
-        id: 'msg-1',
-        conversationId: 'conv-1',
-        senderId: 'athlete-1',
-        senderName: 'Marcus Chen',
-        text: 'Hi Coach, thanks for reaching out! I\'m very interested in your program.',
-        sentAt: new Date(Date.now() - 3600000).toISOString(),
-      },
-      {
-        id: 'msg-2',
-        conversationId: 'conv-1',
-        senderId: 'me',
-        senderName: 'You',
-        text: 'Great to hear! We\'d love to have you visit campus. What dates work for you?',
-        sentAt: new Date(Date.now() - 1800000).toISOString(),
-      },
-      {
-        id: 'msg-3',
-        conversationId: 'conv-1',
-        senderId: 'athlete-1',
-        senderName: 'Marcus Chen',
-        text: 'How about spring break? That\'s when I have the most flexibility.',
-        sentAt: new Date(Date.now() - 600000).toISOString(),
-      },
-    ],
-    unreadCount: 0,
-    lastMessageTime: new Date(Date.now() - 600000).toISOString(),
-  },
-  {
-    id: 'conv-2',
-    participant: {
-      id: 'athlete-2',
-      name: 'Chris Johnson',
-      subtitle: 'Class of 2026',
-      initials: 'CJ',
-      online: false,
-    },
-    messages: [
-      {
-        id: 'msg-4',
-        conversationId: 'conv-2',
-        senderId: 'me',
-        senderName: 'You',
-        text: 'Hi Chris! We\'ve been following your progress and are impressed with your AA scores.',
-        sentAt: new Date(Date.now() - 86400000).toISOString(),
-      },
-    ],
-    unreadCount: 0,
-    lastMessageTime: new Date(Date.now() - 86400000).toISOString(),
-  },
-];
+// Coach: Get sent contact requests (their outgoing conversations)
+export async function getCoachConversations(): Promise<Conversation[]> {
+  const requests = await apiCall<any[]>('/coach/recruiting/contact-requests', {
+    method: 'GET',
+  });
 
-export const ATHLETE_CONVERSATIONS: Conversation[] = [
-  {
-    id: 'conv-3',
-    participant: {
-      id: 'coach-1',
-      name: 'Dan Mills',
-      subtitle: 'Stanford University',
-      initials: 'DM',
-      online: true,
-    },
-    messages: [
-      {
-        id: 'msg-5',
-        conversationId: 'conv-3',
-        senderId: 'coach-1',
-        senderName: 'Dan Mills',
-        text: 'Hi! We\'d love for you to visit Stanford. Your AA average is exactly what we\'re looking for.',
-        sentAt: new Date(Date.now() - 172800000).toISOString(),
-      },
-      {
-        id: 'msg-6',
-        conversationId: 'conv-3',
-        senderId: 'me',
-        senderName: 'You',
-        text: 'Thanks Coach Mills! Stanford sounds amazing. When can we set up a visit?',
-        sentAt: new Date(Date.now() - 86400000).toISOString(),
-      },
-    ],
-    unreadCount: 0,
-    lastMessageTime: new Date(Date.now() - 86400000).toISOString(),
-  },
-  {
-    id: 'conv-4',
-    participant: {
-      id: 'coach-2',
-      name: 'Rick Torres',
-      subtitle: 'University of Oklahoma',
-      initials: 'RT',
-      online: false,
-    },
-    messages: [
-      {
-        id: 'msg-7',
-        conversationId: 'conv-4',
-        senderId: 'coach-2',
-        senderName: 'Rick Torres',
-        text: 'Hey! Just wanted to check in and see if you\'re still interested in OU.',
-        sentAt: new Date(Date.now() - 345600000).toISOString(),
-      },
-    ],
-    unreadCount: 1,
-    lastMessageTime: new Date(Date.now() - 345600000).toISOString(),
-  },
-];
+  // Transform contact requests into conversations
+  return Promise.all(
+    requests.map(async req => {
+      const messages = await getCoachConversationThread(req.id);
+      const lastMsg = messages[messages.length - 1];
+
+      return {
+        id: req.id,
+        participant: {
+          id: req.athleteId,
+          name: req.athleteName,
+          subtitle: `Class of ${req.athleteGradYear}`,
+          initials: req.athleteName
+            .split(' ')
+            .map((n: string) => n[0])
+            .join('')
+            .toUpperCase(),
+        },
+        messages,
+        lastMessageTime: lastMsg?.createdAt || req.createdAt,
+        unreadCount: 0, // Backend will track this if needed
+      };
+    })
+  );
+}
+
+// Athlete: Get received contact requests (inbox)
+export async function getAthleteConversations(): Promise<Conversation[]> {
+  const requests = await apiCall<any[]>('/athlete/inbox/contact-requests', {
+    method: 'GET',
+  });
+
+  // Transform inbox requests into conversations
+  return Promise.all(
+    requests.map(async req => {
+      const messages = await getAthleteConversationThread(req.id);
+      const lastMsg = messages[messages.length - 1];
+
+      return {
+        id: req.id,
+        participant: {
+          id: req.coachId,
+          name: req.coachName,
+          subtitle: req.coachUniversity || 'Coach',
+          initials: req.coachName
+            .split(' ')
+            .map((n: string) => n[0])
+            .join('')
+            .toUpperCase(),
+        },
+        messages,
+        lastMessageTime: lastMsg?.createdAt || req.createdAt,
+        unreadCount: req.unreadCount || 0,
+      };
+    })
+  );
+}
 
 export async function getConversations(role: 'ATHLETE' | 'COACH'): Promise<Conversation[]> {
-  // In demo mode, return mock data
-  // In production, this would call the API
   if (role === 'COACH') {
-    return COACH_CONVERSATIONS;
+    return getCoachConversations();
   } else {
-    return ATHLETE_CONVERSATIONS;
+    return getAthleteConversations();
   }
 }
 
-export async function createReachOutConversation(
-  athleteId: string,
-  athleteName: string,
-  firstMessage: string
-): Promise<Conversation> {
-  // In demo mode, create a mock conversation
-  // In production, this would call the API
-  const conversation: Conversation = {
-    id: `conv-${Date.now()}`,
-    participant: {
-      id: athleteId,
-      name: athleteName,
-      subtitle: 'Class of 2027',
-      initials: athleteName.split(' ').map(n => n[0]).join(''),
-      online: false,
-    },
-    messages: [
-      {
-        id: `msg-${Date.now()}`,
-        conversationId: `conv-${Date.now()}`,
-        senderId: 'me',
-        senderName: 'You',
-        text: firstMessage,
-        sentAt: new Date().toISOString(),
-      },
-    ],
-    unreadCount: 0,
-    lastMessageTime: new Date().toISOString(),
-  };
-  return conversation;
+// Coach: Get conversation thread with athlete
+export async function getCoachConversationThread(contactRequestId: string): Promise<ContactRequestMessage[]> {
+  return apiCall<ContactRequestMessage[]>(
+    `/coach/recruiting/contact-requests/${contactRequestId}/messages`,
+    {
+      method: 'GET',
+    }
+  );
 }
 
-export async function sendMessage(conversationId: string, text: string): Promise<ChatMessage> {
-  // In production, this would call the API
-  const message: ChatMessage = {
-    id: `msg-${Date.now()}`,
-    conversationId,
-    senderId: 'me',
-    senderName: 'You',
-    text,
-    sentAt: new Date().toISOString(),
-  };
-  return message;
+// Athlete: Get conversation thread with coach
+export async function getAthleteConversationThread(contactRequestId: string): Promise<ContactRequestMessage[]> {
+  return apiCall<ContactRequestMessage[]>(
+    `/athlete/inbox/contact-requests/${contactRequestId}/messages`,
+    {
+      method: 'GET',
+    }
+  );
+}
+
+// Coach: Send message in conversation
+export async function sendCoachMessage(contactRequestId: string, text: string): Promise<ContactRequestMessage> {
+  return apiCall<ContactRequestMessage>(
+    `/coach/recruiting/contact-requests/${contactRequestId}/messages`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ messageText: text }),
+    }
+  );
+}
+
+// Athlete: Reply to coach message
+export async function sendAthleteMessage(contactRequestId: string, text: string): Promise<ContactRequestMessage> {
+  return apiCall<ContactRequestMessage>(
+    `/athlete/inbox/contact-requests/${contactRequestId}/messages`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ messageText: text }),
+    }
+  );
+}
+
+// Coach: Initiate contact with athlete
+export async function initiateCoachContact(athleteId: string, initialMessage: string): Promise<any> {
+  return apiCall<any>('/coach/recruiting/contact-requests', {
+    method: 'POST',
+    body: JSON.stringify({
+      athleteId,
+      initialMessage,
+    }),
+  });
 }
 
 export function formatRelativeTime(isoString: string): string {
