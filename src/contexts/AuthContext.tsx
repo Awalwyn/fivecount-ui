@@ -4,10 +4,13 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { createClient } from '@/lib/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 
+export type UserRole = 'ATHLETE' | 'COACH';
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
+  role: UserRole;
   signUp: (email: string, password: string, role: 'ATHLETE' | 'COACH', metadata?: { firstName: string; lastName: string; username: string }) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -19,6 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [role, setRole] = useState<UserRole>('ATHLETE');
 
   useEffect(() => {
     const supabase = createClient();
@@ -27,6 +31,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session?.user) {
+        const userRole = (session.user.user_metadata?.role as UserRole) ?? 'ATHLETE';
+        setRole(userRole);
+      }
       setIsLoading(false);
     });
 
@@ -36,6 +44,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session?.user) {
+        const userRole = (session.user.user_metadata?.role as UserRole) ?? 'ATHLETE';
+        setRole(userRole);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -87,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, isLoading, role, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
