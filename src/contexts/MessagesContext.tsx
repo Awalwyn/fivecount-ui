@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { Conversation, ChatMessage, getConversations, createReachOutConversation } from '@/lib/api/messages';
+import { Conversation, ChatMessage, getConversations } from '@/lib/api/messages';
 
 interface MessagesContextType {
   conversations: Conversation[];
@@ -45,8 +45,13 @@ export function MessagesProvider({ children }: { children: ReactNode }) {
         setOpenWindowIds([]);
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Failed to load conversations';
-        console.error('Failed to load conversations:', err);
-        setError(msg);
+        const expectedEmptyState =
+          msg.toLowerCase().includes('coach not found') ||
+          msg.toLowerCase().includes('coach profile not found');
+        if (!expectedEmptyState) {
+          console.error('Failed to load conversations:', err);
+        }
+        setError(expectedEmptyState ? null : msg);
         setConversations([]);
       } finally {
         setIsLoading(false);
