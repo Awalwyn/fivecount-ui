@@ -24,23 +24,71 @@ export interface Conversation {
   unreadCount: number;
 }
 
+interface BackendPage<T> {
+  content?: T[];
+}
+
+interface BackendContactRequest {
+  id: string;
+  coachId?: string;
+  coachName?: string;
+  coachProgram?: string;
+  coachUniversity?: string;
+  athleteId?: string;
+  athleteName?: string;
+  athleteGradYear?: number;
+  createdAt?: string;
+  unreadCount?: number;
+}
+
+interface BackendMessage {
+  id: string;
+  senderId: string;
+  senderName?: string;
+  messageText?: string;
+  text?: string;
+  content?: string;
+  createdAt?: string;
+  sentAt?: string;
+}
+
+function toArray<T>(value: T[] | BackendPage<T>): T[] {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  return value.content ?? [];
+}
+
+function initialsFor(name?: string): string {
+  if (!name) {
+    return '?';
+  }
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase();
+}
+
 // Map backend message response to frontend ChatMessage format
-function mapBackendMessage(msg: any, conversationId: string): ChatMessage {
+function mapBackendMessage(msg: BackendMessage, conversationId: string): ChatMessage {
   return {
     id: msg.id,
     conversationId,
     senderId: msg.senderId,
-    senderName: msg.senderName,
-    text: msg.messageText || msg.text,
-    sentAt: msg.createdAt || msg.sentAt,
+    senderName: msg.senderName || 'Unknown',
+    text: msg.messageText || msg.text || msg.content || '',
+    sentAt: msg.createdAt || msg.sentAt || new Date().toISOString(),
   };
 }
 
 // Coach: Get sent contact requests (their outgoing conversations)
 export async function getCoachConversations(): Promise<Conversation[]> {
-  const requests = await apiCall<any[]>('/api/coach/recruiting/contact-requests', {
+  const response = await apiCall<BackendContactRequest[] | BackendPage<BackendContactRequest>>('/api/coach/recruiting/contact-requests', {
     method: 'GET',
   });
+  const requests = toArray(response);
 
   return Promise.all(
     requests.map(async req => {
@@ -50,17 +98,13 @@ export async function getCoachConversations(): Promise<Conversation[]> {
       return {
         id: req.id,
         participant: {
-          id: req.athleteId,
-          name: req.athleteName,
-          subtitle: `Class of ${req.athleteGradYear}`,
-          initials: req.athleteName
-            .split(' ')
-            .map((n: string) => n[0])
-            .join('')
-            .toUpperCase(),
+          id: req.athleteId || '',
+          name: req.athleteName || 'Athlete',
+          subtitle: req.athleteGradYear ? `Class of ${req.athleteGradYear}` : 'Athlete',
+          initials: initialsFor(req.athleteName),
         },
         messages,
-        lastMessageTime: lastMsg?.sentAt || req.createdAt,
+        lastMessageTime: lastMsg?.sentAt || req.createdAt || new Date().toISOString(),
         unreadCount: 0,
       };
     })
@@ -69,9 +113,10 @@ export async function getCoachConversations(): Promise<Conversation[]> {
 
 // Athlete: Get received contact requests (inbox)
 export async function getAthleteConversations(): Promise<Conversation[]> {
-  const requests = await apiCall<any[]>('/api/athlete/inbox/contact-requests', {
+  const response = await apiCall<BackendContactRequest[] | BackendPage<BackendContactRequest>>('/api/athlete/inbox/contact-requests', {
     method: 'GET',
   });
+  const requests = toArray(response);
 
   return Promise.all(
     requests.map(async req => {
@@ -81,17 +126,13 @@ export async function getAthleteConversations(): Promise<Conversation[]> {
       return {
         id: req.id,
         participant: {
-          id: req.coachId,
-          name: req.coachName,
+          id: req.coachId || '',
+          name: req.coachName || 'Coach',
           subtitle: req.coachUniversity || 'Coach',
-          initials: req.coachName
-            .split(' ')
-            .map((n: string) => n[0])
-            .join('')
-            .toUpperCase(),
+          initials: initialsFor(req.coachName),
         },
         messages,
-        lastMessageTime: lastMsg?.sentAt || req.createdAt,
+        lastMessageTime: lastMsg?.sentAt || req.createdAt || new Date().toISOString(),
         unreadCount: req.unreadCount || 0,
       };
     })
@@ -108,7 +149,7 @@ export async function getConversations(role: 'ATHLETE' | 'COACH'): Promise<Conve
 
 // Coach: Get conversation thread with athlete
 export async function getCoachConversationThread(contactRequestId: string): Promise<ChatMessage[]> {
-  const raw = await apiCall<any[]>(
+  const raw = await apiCall<BackendMessage[]>(
     `/api/coach/recruiting/contact-requests/${contactRequestId}/messages`,
     { method: 'GET' }
   );
@@ -117,7 +158,7 @@ export async function getCoachConversationThread(contactRequestId: string): Prom
 
 // Athlete: Get conversation thread with coach
 export async function getAthleteConversationThread(contactRequestId: string): Promise<ChatMessage[]> {
-  const raw = await apiCall<any[]>(
+  const raw = await apiCall<BackendMessage[]>(
     `/api/athlete/inbox/contact-requests/${contactRequestId}/messages`,
     { method: 'GET' }
   );
@@ -126,11 +167,11 @@ export async function getAthleteConversationThread(contactRequestId: string): Pr
 
 // Coach: Send message in conversation
 export async function sendCoachMessage(contactRequestId: string, text: string): Promise<ChatMessage> {
-  const raw = await apiCall<any>(
+  const raw = await apiCall<BackendMessage>(
     `/api/coach/recruiting/contact-requests/${contactRequestId}/messages`,
     {
       method: 'POST',
-      body: JSON.stringify({ messageText: text }),
+      body: JSON.stringify({ content: text }),
     }
   );
   return mapBackendMessage(raw, contactRequestId);
@@ -138,21 +179,21 @@ export async function sendCoachMessage(contactRequestId: string, text: string): 
 
 // Athlete: Reply to coach message
 export async function sendAthleteMessage(contactRequestId: string, text: string): Promise<ChatMessage> {
-  const raw = await apiCall<any>(
+  const raw = await apiCall<BackendMessage>(
     `/api/athlete/inbox/contact-requests/${contactRequestId}/messages`,
     {
       method: 'POST',
-      body: JSON.stringify({ messageText: text }),
+      body: JSON.stringify({ content: text }),
     }
   );
   return mapBackendMessage(raw, contactRequestId);
 }
 
 // Coach: Initiate contact with athlete
-export async function initiateCoachContact(athleteId: string, initialMessage: string): Promise<any> {
-  return apiCall<any>('/api/coach/recruiting/contact-requests', {
+export async function initiateCoachContact(athleteId: string, initialMessage: string): Promise<BackendContactRequest> {
+  return apiCall<BackendContactRequest>('/api/coach/recruiting/contact-requests', {
     method: 'POST',
-    body: JSON.stringify({ athleteId, initialMessage }),
+    body: JSON.stringify({ athleteId, coachMessage: initialMessage }),
   });
 }
 

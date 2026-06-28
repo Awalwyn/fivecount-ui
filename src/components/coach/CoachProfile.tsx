@@ -24,15 +24,19 @@ export function CoachProfile() {
         setIsLoading(true);
         setError(null);
 
-        const [profileData, completenessData] = await Promise.all([
-          getCoachProfile(),
-          checkProfileCompleteness(),
-        ]);
+        const profileData = await getCoachProfile();
+        const completenessData = await checkProfileCompleteness();
 
         setProfile(profileData);
         setCompleteness(completenessData);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load profile');
+        const message = err instanceof Error ? err.message : 'Failed to load profile';
+        if (message.toLowerCase().includes('coach profile not found')) {
+          setProfile(null);
+          setCompleteness(null);
+          return;
+        }
+        setError(message);
       } finally {
         setIsLoading(false);
       }
