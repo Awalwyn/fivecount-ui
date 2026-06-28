@@ -1,4 +1,5 @@
 import { apiCall } from './client';
+import { buildApiUrl } from './url';
 
 export type PostType = 'REGULAR' | 'SCORE_TILE';
 
@@ -44,7 +45,7 @@ export async function deletePost(postId: string): Promise<void> {
 }
 
 export async function getMyPosts(userId: string): Promise<Post[]> {
-  const data = await apiCall<any>(`/users/${userId}/posts`, {
+  const data = await apiCall<{ content?: Post[] }>(`/users/${userId}/posts`, {
     method: 'GET',
   });
   // Backend returns paginated response, extract content array
@@ -52,14 +53,8 @@ export async function getMyPosts(userId: string): Promise<Post[]> {
 }
 
 // Public endpoints
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-if (!API_BASE_URL) {
-  throw new Error('NEXT_PUBLIC_API_BASE_URL is not defined');
-}
-
 export async function getAthletePosts(athleteId: string): Promise<Post[]> {
-  const response = await fetch(`${API_BASE_URL}/api/users/${athleteId}/posts`);
+  const response = await fetch(buildApiUrl(`/users/${athleteId}/posts`));
   if (!response.ok) {
     throw new Error(`Failed to fetch athlete posts: ${response.statusText}`);
   }
@@ -69,7 +64,7 @@ export async function getAthletePosts(athleteId: string): Promise<Post[]> {
 }
 
 export async function getFeedPosts(): Promise<Post[]> {
-  const response = await fetch(`${API_BASE_URL}/api/feed`);
+  const response = await fetch(buildApiUrl('/feed'));
   if (!response.ok) {
     throw new Error(`Failed to fetch feed: ${response.statusText}`);
   }

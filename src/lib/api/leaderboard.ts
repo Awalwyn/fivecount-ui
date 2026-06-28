@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { buildApiUrl } from './url';
 
 export interface LeaderboardEntry {
   rank: number;
@@ -13,11 +13,7 @@ export interface LeaderboardEntry {
  * Get top athletes by all-around score for the past week
  */
 export async function getWeeklyLeaderboard(): Promise<LeaderboardEntry[]> {
-  if (!API_BASE_URL) {
-    throw new Error('API base URL not configured');
-  }
-
-  const response = await fetch(`${API_BASE_URL}/api/leaderboard/weekly/all-around`);
+  const response = await fetch(buildApiUrl('/leaderboard/weekly/all-around'));
   if (!response.ok) {
     throw new Error(`Failed to fetch leaderboard: ${response.status}`);
   }

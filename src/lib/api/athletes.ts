@@ -1,4 +1,5 @@
 import { apiCall } from './client';
+import { buildApiUrl } from './url';
 import { EventType } from './competitions';
 import type { Post } from './posts';
 
@@ -17,7 +18,7 @@ export interface AthleteProfile {
   profilePictureUrl?: string;
   instagramHandle?: string;
   commitStatus?: CommitStatus;
-  eventStats?: Record<string, any>; // Stats from API
+  eventStats?: Record<string, unknown>; // Stats from API
   posts?: Post[]; // Posts included in profile response
   createdAt: string;
   updatedAt: string;
@@ -69,7 +70,7 @@ export async function getPublicAthleteProfile(id: string): Promise<AthleteProfil
     throw new Error('API base URL not configured');
   }
 
-  const response = await fetch(`${apiBaseUrl}/athletes/${id}`);
+  const response = await fetch(buildApiUrl(`/athletes/${id}`));
   if (!response.ok) {
     throw new Error(`Failed to fetch athlete profile: ${response.status}`);
   }
@@ -149,7 +150,7 @@ export async function searchAthletes(
     throw new Error('API base URL not configured');
   }
 
-  const response = await fetch(`${apiBaseUrl}/athletes/search?${params.toString()}`);
+  const response = await fetch(buildApiUrl(`/athletes/search?${params.toString()}`));
   if (!response.ok) {
     throw new Error(`Search failed: ${response.status}`);
   }

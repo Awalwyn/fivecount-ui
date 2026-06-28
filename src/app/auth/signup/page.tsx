@@ -41,7 +41,7 @@ export default function SignupPage() {
       const { error: signUpError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/auth/callback?role=${role}`,
         },
       });
 
@@ -529,7 +529,7 @@ export default function SignupPage() {
                     disabled={isLoading}
                     className="w-4 h-4 cursor-pointer"
                   />
-                  <span className="body-text text-white text-sm">I'm an Athlete</span>
+                  <span className="body-text text-white text-sm">I&apos;m an Athlete</span>
                 </label>
 
                 <label className="flex-1 flex items-center gap-3 px-4 py-3.5 rounded-lg cursor-pointer transition-all" style={{
@@ -545,7 +545,7 @@ export default function SignupPage() {
                     disabled={isLoading}
                     className="w-4 h-4 cursor-pointer"
                   />
-                  <span className="body-text text-white text-sm">I'm a Coach</span>
+                  <span className="body-text text-white text-sm">I&apos;m a Coach</span>
                 </label>
               </div>
             </div>

@@ -2,9 +2,14 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { buildApiUrl } from '@/lib/api/url';
 import { User, Session } from '@supabase/supabase-js';
 
 export type UserRole = 'ATHLETE' | 'COACH';
+
+interface AccountResponse {
+  role?: UserRole;
+}
 
 interface AuthContextType {
   user: User | null;
@@ -27,27 +32,87 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const supabase = createClient();
 
+    async function registerBackendAccount(nextSession: Session, accountRole: UserRole) {
+      const params = new URLSearchParams({
+        userId: nextSession.user.id,
+        email: nextSession.user.email || '',
+        role: accountRole,
+      });
+
+      const username = nextSession.user.user_metadata?.username;
+      if (typeof username === 'string' && username) {
+        params.set('username', username);
+      }
+
+      const response = await fetch(buildApiUrl(`/auth/register-supabase?${params.toString()}`), {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${nextSession.access_token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to complete account registration');
+      }
+    }
+
+    async function syncSession(nextSession: Session | null) {
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+
+      if (!nextSession?.user) {
+        setRole('ATHLETE');
+        return;
+      }
+
+      const metadataRole = nextSession.user.user_metadata?.role as UserRole | undefined;
+      if (metadataRole === 'ATHLETE' || metadataRole === 'COACH') {
+        setRole(metadataRole);
+      }
+
+      try {
+        const response = await fetch(buildApiUrl('/users/me/account'), {
+          headers: {
+            Authorization: `Bearer ${nextSession.access_token}`,
+          },
+        });
+
+        if (!response.ok) {
+          if (metadataRole === 'ATHLETE' || metadataRole === 'COACH') {
+            await registerBackendAccount(nextSession, metadataRole);
+            setRole(metadataRole);
+          }
+          return;
+        }
+
+        const account = (await response.json()) as AccountResponse;
+        if (
+          metadataRole === 'COACH' &&
+          account.role === 'ATHLETE'
+        ) {
+          await registerBackendAccount(nextSession, metadataRole);
+          setRole(metadataRole);
+          return;
+        }
+
+        if (account.role === 'ATHLETE' || account.role === 'COACH') {
+          setRole(account.role);
+        }
+      } catch {
+        // Keep the Supabase metadata role if the API is temporarily unavailable.
+      }
+    }
+
     // Check current session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        const userRole = (session.user.user_metadata?.role as UserRole) ?? 'ATHLETE';
-        setRole(userRole);
-      }
-      setIsLoading(false);
+      syncSession(session).finally(() => setIsLoading(false));
     });
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        const userRole = (session.user.user_metadata?.role as UserRole) ?? 'ATHLETE';
-        setRole(userRole);
-      }
+      void syncSession(session);
     });
 
     return () => subscription.unsubscribe();
@@ -70,17 +135,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Step 2: Call backend to create User record and auto-create profile
     if (data.user) {
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-      if (!apiBaseUrl) throw new Error('API base URL not configured');
-
       const username = metadata?.username || '';
-      const response = await fetch(`${apiBaseUrl}/auth/register-supabase?userId=${data.user.id}&email=${email}&role=${role}&username=${encodeURIComponent(username)}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const params = new URLSearchParams({
+        userId: data.user.id,
+        email,
+        role,
       });
+      if (username) {
+        params.set('username', username);
+      }
 
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (data.session?.access_token) {
+        headers.Authorization = `Bearer ${data.session.access_token}`;
+      }
+
+      if (!data.session?.access_token) {
+        return;
+      }
+
+      const response = await fetch(buildApiUrl(`/auth/register-supabase?${params.toString()}`), {
+        method: 'POST',
+        headers,
+      });
       if (!response.ok) {
         throw new Error('Failed to create user profile');
       }
@@ -116,4 +195,3 @@ export function useAuthContext() {
   }
   return context;
 }
-

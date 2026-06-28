@@ -1,6 +1,6 @@
 // Public sponsor API - no authentication required
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { buildApiUrl } from './url';
 
 export interface Sponsor {
   id: string;
@@ -19,12 +19,7 @@ export interface Sponsor {
  */
 export async function getRandomActiveSponsor(): Promise<Sponsor | null> {
   try {
-    if (!API_BASE_URL) {
-      console.log('API base URL not configured');
-      return null;
-    }
-
-    const response = await fetch(`${API_BASE_URL}/sponsors/random`, {
+    const response = await fetch(buildApiUrl('/sponsors/random'), {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -48,12 +43,7 @@ export async function getRandomActiveSponsor(): Promise<Sponsor | null> {
  */
 export async function getActiveSponsors(): Promise<Sponsor[]> {
   try {
-    if (!API_BASE_URL) {
-      console.log('API base URL not configured');
-      return [];
-    }
-
-    const response = await fetch(`${API_BASE_URL}/sponsors/active`, {
+    const response = await fetch(buildApiUrl('/sponsors/active'), {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

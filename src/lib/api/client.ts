@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+import { buildApiUrl } from './url';
 
 async function getAuthToken(): Promise<string> {
   const supabase = createClient();
@@ -23,7 +22,7 @@ export async function apiCall<T>(
   try {
     const supabase = createClient();
     const token = await getAuthToken();
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(buildApiUrl(endpoint), {
       ...options,
       headers: {
         'Authorization': `Bearer ${token}`,
