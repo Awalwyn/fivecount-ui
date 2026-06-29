@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Clock3, MessageSquare, Send } from 'lucide-react';
+import { Clock3, MessageSquare, Send, ShieldCheck } from 'lucide-react';
 import { useDemo, type DemoRole } from '@/components/demo/DemoContext';
 
 type DemoMessage = {
@@ -14,6 +14,7 @@ type DemoMessage = {
 
 type DemoConversation = {
   id: string;
+  acceptedNotice: string;
   participant: {
     id: string;
     name: string;
@@ -26,9 +27,17 @@ type DemoConversation = {
   lastMessageTime: string;
 };
 
+type PendingRequest = {
+  id: string;
+  participant: DemoConversation['participant'];
+  preview: string;
+  requestedAt: string;
+};
+
 const COACH_CONVERSATIONS: DemoConversation[] = [
   {
     id: 'coach-conv-1',
+    acceptedNotice: 'Marcus Chen accepted your message request. You can now continue the conversation.',
     participant: {
       id: 'athlete-1',
       name: 'Marcus Chen',
@@ -64,6 +73,7 @@ const COACH_CONVERSATIONS: DemoConversation[] = [
   },
   {
     id: 'coach-conv-2',
+    acceptedNotice: 'Chris Johnson accepted your message request. You can now continue the conversation.',
     participant: {
       id: 'athlete-2',
       name: 'Chris Johnson',
@@ -88,6 +98,7 @@ const COACH_CONVERSATIONS: DemoConversation[] = [
 const ATHLETE_CONVERSATIONS: DemoConversation[] = [
   {
     id: 'athlete-conv-1',
+    acceptedNotice: 'You accepted a message request from Coach Dan Mills. Stanford University can now message you here.',
     participant: {
       id: 'coach-1',
       name: 'Dan Mills',
@@ -116,6 +127,7 @@ const ATHLETE_CONVERSATIONS: DemoConversation[] = [
   },
   {
     id: 'athlete-conv-2',
+    acceptedNotice: 'You accepted a message request from Coach Rick Torres. University of Oklahoma can now message you here.',
     participant: {
       id: 'coach-2',
       name: 'Rick Torres',
@@ -137,10 +149,51 @@ const ATHLETE_CONVERSATIONS: DemoConversation[] = [
   },
 ];
 
+const COACH_PENDING_REQUESTS: PendingRequest[] = [
+  {
+    id: 'coach-pending-1',
+    participant: {
+      id: 'athlete-3',
+      name: 'Jake Williams',
+      subtitle: 'Class of 2026',
+      initials: 'JW',
+    },
+    preview: 'Request sent. Waiting for Jake to accept before chat opens.',
+    requestedAt: '2026-06-28T10:25:00.000Z',
+  },
+  {
+    id: 'coach-pending-2',
+    participant: {
+      id: 'athlete-4',
+      name: 'Tyler Martinez',
+      subtitle: 'Class of 2025',
+      initials: 'TM',
+    },
+    preview: 'Request sent after viewing his vault and floor scores.',
+    requestedAt: '2026-06-27T20:05:00.000Z',
+  },
+];
+
+const ATHLETE_PENDING_REQUESTS: PendingRequest[] = [
+  {
+    id: 'athlete-pending-1',
+    participant: {
+      id: 'coach-3',
+      name: 'Kelly Walsh',
+      subtitle: 'University of Michigan',
+      initials: 'KW',
+    },
+    preview: 'Coach Walsh wants to talk about your vault progress and upcoming meet schedule.',
+    requestedAt: '2026-06-28T12:05:00.000Z',
+  },
+];
+
 export default function DemoMessages() {
   const { role } = useDemo();
   const [coachConversations, setCoachConversations] = useState(COACH_CONVERSATIONS);
   const [athleteConversations, setAthleteConversations] = useState(ATHLETE_CONVERSATIONS);
+  const [coachPendingRequests] = useState(COACH_PENDING_REQUESTS);
+  const [athletePendingRequests, setAthletePendingRequests] = useState(ATHLETE_PENDING_REQUESTS);
   const [activeByRole, setActiveByRole] = useState<Record<DemoRole, string>>({
     ATHLETE: ATHLETE_CONVERSATIONS[0].id,
     COACH: COACH_CONVERSATIONS[0].id,
@@ -149,6 +202,7 @@ export default function DemoMessages() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const conversations = role === 'COACH' ? coachConversations : athleteConversations;
+  const pendingRequests = role === 'COACH' ? coachPendingRequests : athletePendingRequests;
   const activeConversationId = activeByRole[role];
   const activeConversation = conversations.find((conversation) => conversation.id === activeConversationId) ?? conversations[0];
   const unreadCount = conversations.reduce((sum, conversation) => sum + conversation.unreadCount, 0);
@@ -216,6 +270,35 @@ export default function DemoMessages() {
     setMessageText('');
   };
 
+  const acceptPendingRequest = (request: PendingRequest) => {
+    if (role !== 'ATHLETE') return;
+
+    const acceptedAt = new Date().toISOString();
+    const newConversation: DemoConversation = {
+      id: `accepted-${request.id}`,
+      acceptedNotice: `You accepted a message request from Coach ${request.participant.name}. ${request.participant.subtitle} can now message you here.`,
+      participant: {
+        ...request.participant,
+        online: true,
+      },
+      messages: [
+        {
+          id: `accepted-message-${request.id}`,
+          senderId: request.participant.id,
+          senderName: request.participant.name,
+          text: request.preview,
+          sentAt: request.requestedAt,
+        },
+      ],
+      unreadCount: 0,
+      lastMessageTime: acceptedAt,
+    };
+
+    setAthletePendingRequests((current) => current.filter((pending) => pending.id !== request.id));
+    setAthleteConversations((current) => [newConversation, ...current]);
+    setActiveByRole((current) => ({ ...current, ATHLETE: newConversation.id }));
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-5 pb-6 border-b border-[#1f1f1f]">
@@ -228,6 +311,7 @@ export default function DemoMessages() {
         <div className="flex items-center gap-3 rounded-lg border border-[#1f1f1f] bg-[#111111] px-4 py-3">
           <MessageSquare size={18} className="text-[#5EFF6E]" />
           <span className="text-sm font-semibold text-white">{conversations.length} conversations</span>
+          {pendingRequests.length > 0 && <span className="rounded-full border border-[#333333] px-2 py-0.5 text-xs font-bold text-[#a0a0a0]">{pendingRequests.length} pending</span>}
           {unreadCount > 0 && <span className="rounded-full bg-[#5EFF6E] px-2 py-0.5 text-xs font-bold text-black">{unreadCount} unread</span>}
         </div>
       </div>
@@ -244,7 +328,10 @@ export default function DemoMessages() {
             </span>
           </div>
 
-          <div className="max-h-[300px] overflow-y-auto lg:max-h-none">
+          <div className="max-h-[360px] overflow-y-auto lg:max-h-none">
+            <div className="px-5 pb-2 pt-4">
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#5EFF6E]">Accepted chats</p>
+            </div>
             {conversations.map((conversation) => {
               const lastMessage = conversation.messages[conversation.messages.length - 1];
               const isActive = activeConversation?.id === conversation.id;
@@ -287,6 +374,49 @@ export default function DemoMessages() {
                 </button>
               );
             })}
+
+            {pendingRequests.length > 0 && (
+              <div className="border-t border-[#1f1f1f]">
+                <div className="px-5 pb-2 pt-4">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7f8794]">Pending requests</p>
+                </div>
+
+                {pendingRequests.map((request) => (
+                  <div key={request.id} className="border-b border-[#1f1f1f] px-5 py-4">
+                    <div className="flex gap-3">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#1b1b1b] text-sm font-bold text-[#a0a0a0]">
+                        {request.participant.initials}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-white">{request.participant.name}</p>
+                            <p className="mt-0.5 truncate text-xs text-[#7f8794]">{request.participant.subtitle}</p>
+                          </div>
+                          <span className="shrink-0 text-xs text-[#7f8794]">{formatRelativeTime(request.requestedAt)}</span>
+                        </div>
+                        <p className="mt-3 text-sm leading-snug text-[#8f8f8f]">{request.preview}</p>
+
+                        {role === 'ATHLETE' ? (
+                          <button
+                            type="button"
+                            onClick={() => acceptPendingRequest(request)}
+                            className="mt-3 rounded-md bg-[#5EFF6E] px-3 py-1.5 text-xs font-bold text-black transition-colors hover:bg-[#4ee65d]"
+                          >
+                            Accept request
+                          </button>
+                        ) : (
+                          <span className="mt-3 inline-flex rounded-md border border-[#333333] px-3 py-1.5 text-xs font-bold text-[#a0a0a0]">
+                            Waiting on athlete
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </aside>
 
@@ -307,6 +437,11 @@ export default function DemoMessages() {
             </header>
 
             <div className="flex-1 space-y-4 overflow-y-auto p-5 sm:p-6">
+              <div className="mx-auto flex max-w-2xl items-center justify-center gap-2 rounded-full border border-[#263a28] bg-[#101811] px-4 py-2 text-center text-xs font-semibold text-[#a0a0a0]">
+                <ShieldCheck size={14} className="shrink-0 text-[#5EFF6E]" />
+                <span>{activeConversation.acceptedNotice}</span>
+              </div>
+
               {activeConversation.messages.map((message) => {
                 const isMe = message.senderId === 'me';
 
