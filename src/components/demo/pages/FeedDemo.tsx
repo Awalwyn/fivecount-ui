@@ -160,17 +160,17 @@ export function FeedDemo() {
               </h3>
               <div className="space-y-3">
                 {[
-                  { rank: '1', name: 'Andrew Thompson', score: 15.5, event: 'Vault' },
-                  { rank: '2', name: 'Michael Rodriguez', score: 15.4, event: 'Floor' },
-                  { rank: '3', name: 'Marcus Johnson', score: 15.4, event: 'Vault' },
+                  { rank: '1', name: 'Andrew Thompson', score: 86.7, meet: 'West Coast Classic' },
+                  { rank: '2', name: 'Michael Rodriguez', score: 85.9, meet: 'Regional Championship' },
+                  { rank: '3', name: 'Marcus Johnson', score: 81.9, meet: 'State Qualifier Meet' },
                 ].map((athlete) => (
                   <div key={athlete.rank} className="flex items-center justify-between pb-3 border-b border-[#1f1f1f] last:border-0 cursor-pointer hover:text-[#5EFF6E] transition-colors">
                     <div className="flex-1">
                       <p className="text-sm font-semibold">#{athlete.rank}</p>
                       <p className="text-xs text-[#a0a0a0]">{athlete.name}</p>
-                      <p className="text-xs text-[#a0a0a0]">{athlete.event}</p>
+                      <p className="text-xs text-[#a0a0a0]">{athlete.meet}</p>
                     </div>
-                    <span className="text-[#5EFF6E] font-semibold">{athlete.score}</span>
+                    <span className="text-[#5EFF6E] font-semibold">{athlete.score.toFixed(1)}</span>
                   </div>
                 ))}
               </div>
@@ -183,14 +183,14 @@ export function FeedDemo() {
               </h3>
               <div className="space-y-3">
                 {[
-                  { name: 'Brandon Lopez', year: 2026, state: 'TX', skill: 'Elite' },
-                  { name: 'Tyler Richardson', year: 2027, state: 'NV', skill: 'Advanced' },
-                  { name: 'Justin Taylor', year: 2027, state: 'CO', skill: 'Advanced' },
+                  { name: 'Brandon Lopez', year: 2026, state: 'TX', level: 'Level 10' },
+                  { name: 'Tyler Richardson', year: 2027, state: 'NV', level: 'Transfer Portal' },
+                  { name: 'Justin Taylor', year: 2027, state: 'CO', level: 'Level 10' },
                 ].map((athlete) => (
                   <div key={athlete.name} className="border border-[#1f1f1f] rounded p-3 hover:border-[#5EFF6E] transition-colors cursor-pointer">
                     <p className="text-sm font-semibold">{athlete.name}</p>
                     <p className="text-xs text-[#a0a0a0]">Class of {athlete.year} • {athlete.state}</p>
-                    <p className="text-xs text-[#5EFF6E] mt-2">{athlete.skill} Level</p>
+                    <p className="text-xs text-[#5EFF6E] mt-2">{athlete.level}</p>
                   </div>
                 ))}
               </div>

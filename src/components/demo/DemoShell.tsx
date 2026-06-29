@@ -5,9 +5,9 @@ import { DemoSidebar } from './DemoSidebar';
 
 export function DemoShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen bg-[#0a0a0a]">
+    <div className="flex h-screen flex-col md:flex-row bg-[#0a0a0a]">
       <DemoSidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
         <DemoHeader />
         <main className="flex-1 overflow-auto">
           {children}

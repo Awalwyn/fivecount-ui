@@ -208,15 +208,57 @@ export const demoCoach: CoachProfile = {
   firstName: 'Michael',
   lastName: 'Chen',
   program: 'Stanford University',
-  position: 'Men\'s Gymnastics Coach',
+  position: 'Head Coach',
   email: 'mchen@stanford.edu',
   verificationStatus: 'VERIFIED',
-  bio: 'Building a competitive men\'s gymnastics program at Stanford. Focused on recruiting top talent and developing elite male gymnasts.',
+  bio: 'Building a championship-caliber men\'s gymnastics program at Stanford. Focused on recruiting disciplined, high-character student-athletes who can contribute across multiple apparatus.',
   city: 'Stanford',
   state: 'CA',
   createdAt: '2024-01-10',
   updatedAt: '2026-03-10',
 };
+
+export const demoCoachProgramLinks = {
+  coachInstagram: '@coachchen',
+  programInstagram: '@stanfordmgym',
+  programWebsite: 'gostanford.com/mgym',
+};
+
+export const demoCoachTeamStats = [
+  { label: 'Season Best', value: '350.54', detail: 'team total' },
+  { label: 'Team AA Avg', value: '84.72', detail: 'all-around' },
+  { label: 'Top Event Avg', value: '14.82', detail: 'high bar' },
+  { label: 'Roster GPA', value: '3.62', detail: 'team average' },
+];
+
+export const demoCoachAccolades = [
+  { title: 'NCAA Championship Team Finalist', year: '2026' },
+  { title: 'MPSF Team Runner-Up', year: '2025' },
+  { title: 'Four All-America Honors', year: '2025' },
+  { title: 'Top-5 National High Bar Ranking', year: '2026' },
+];
+
+export const demoCoachRecruitingFocus = [
+  { label: 'Grad Years', value: '2026-2028' },
+  { label: 'Priority Events', value: 'Pommel Horse, Rings, High Bar' },
+  { label: 'Target AA', value: '83.0+' },
+  { label: 'Roster Needs', value: '2 specialists, 1 all-arounder' },
+];
+
+export const demoCoachPosts = [
+  {
+    id: 'coach-post-001',
+    content: 'Proud of this group for posting our best team score of the season. The standard keeps rising.',
+    tag: 'Team Update',
+    createdAt: '2 days ago',
+  },
+  {
+    id: 'coach-post-002',
+    content: 'Recruiting notes from Winter Cup are in. We are prioritizing clean execution, consistency, and athletes who compete with composure.',
+    tag: 'Recruiting',
+    createdAt: '1 week ago',
+  },
+];
 
 export const demoProspects: Prospect[] = [
   {
@@ -526,7 +568,7 @@ export const mockAthletes = [
       { event: 'VAULT' as EventType, averageScore: 15.4 },
       { event: 'FLOOR' as EventType, averageScore: 14.8 },
     ],
-    commitStatus: 'OPEN_TO_RECRUITING' as CommitStatus,
+    commitStatus: 'VERBALLY_COMMITTED' as CommitStatus,
   },
   {
     id: 'athlete-002',
@@ -541,7 +583,7 @@ export const mockAthletes = [
       { event: 'FLOOR' as EventType, averageScore: 15.1 },
       { event: 'VAULT' as EventType, averageScore: 14.7 },
     ],
-    commitStatus: 'OPEN_TO_RECRUITING' as CommitStatus,
+    commitStatus: 'SIGNED' as CommitStatus,
   },
   {
     id: 'athlete-003',
@@ -556,7 +598,7 @@ export const mockAthletes = [
       { event: 'VAULT' as EventType, averageScore: 14.8 },
       { event: 'FLOOR' as EventType, averageScore: 14.3 },
     ],
-    commitStatus: 'OPEN_TO_RECRUITING' as CommitStatus,
+    commitStatus: 'NOT_RECRUITING' as CommitStatus,
   },
   {
     id: 'athlete-004',

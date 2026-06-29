@@ -5,8 +5,8 @@ import { DemoRoleToggle } from './DemoRoleToggle';
 
 export function DemoHeader() {
   return (
-    <header className="sticky top-0 z-40 bg-[#0a0a0a] border-b border-[#1f1f1f] px-6 py-4">
-      <div className="flex items-center justify-between">
+    <header className="sticky top-0 z-40 bg-[#0a0a0a] border-b border-[#1f1f1f] px-4 sm:px-6 py-4">
+      <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Link href="/demo/dashboard" className="font-display text-xl tracking-[2px] text-[#5EFF6E]">
             FIVECOUNT
